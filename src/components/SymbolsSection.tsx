@@ -23,7 +23,7 @@ export default function SymbolsSection() {
 
   const INITIAL_TREASURES = [
     "Anne Bustamante", "Martha Ponce", "Erika Lagata", "Hanah Laurenciano",
-    "Aliane Estevez", "Cristina Bola", "Anyah Aquino", "Trisha Nicolas",
+    "Aliane Estevez", "Cristina Bola", "Georcelle Afable", "Trisha Nicolas",
     "Ilegna Regio", "Amanda Cortez", "Tristan Yap", "Miggy Fadul",
     "Aareca Legaspi", "Cyrene Ho", "Alexandra Paliza", "Elisse Mangubat",
     "Marcuisha Matthea", "Nikkie Dullate"
@@ -33,7 +33,7 @@ export default function SymbolsSection() {
     "Lorena Bustamante", "Richard Mortos", "Celenia Morse", "Jinky Ordelas",
     "Monica Rodriguez", "Elisa Lagata", "Brando Ponce", "Analiza Caliboso",
     "Jamie Santander", "Criselda Urbano Lopez", "Mar Urbano", "Lilibeth Urbano Yap",
-    "Jovy Garcia", "Olive Diza", "Jaja Alviar", "Marj Barnachea",
+    "Jovy Garcia", "Arniza Urbano", "Jaja Alviar", "Marj Barnachea",
     "Mercy Laurenciano", "Lotlot Ordelas"
   ];
 

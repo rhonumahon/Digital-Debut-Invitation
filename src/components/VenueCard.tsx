@@ -19,7 +19,7 @@ export default function VenueCard() {
             <div 
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
               style={{
-                backgroundImage: `url('https://scontent.fmnl17-8.fna.fbcdn.net/v/t39.30808-6/536278440_1208020288007967_8337849002782860264_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=104&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=366mJlytvFYQ7kNvwHejMF-&_nc_oc=AdrJZo2MS4ectXtxOmE06zdY4GzDUqHacv976KH4erUEDjgQ9WSWCYk_QkPamzg8zjA&_nc_zt=23&_nc_ht=scontent.fmnl17-8.fna&_nc_gid=jlHIWjUGkl59dxjyqdVM9g&_nc_ss=7b2a8&oh=00_Af-nhMv9n9dUbTX8M_KYbPqm4KGDWb48lqqBqMvT_PQFUg&oe=6A277601')`,
+                backgroundImage: `url('https://scontent.fmnl17-8.fna.fbcdn.net/v/t39.30808-6/536278440_1208020288007967_8337849002782860264_n.jpg?stp=cp6_dst-jpg_tt6&cstp=mx2048x2048&ctp=s2048x2048&_nc_cat=104&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=9kVgk29ZfcgQ7kNvwHXsEeL&_nc_oc=AdrgS4K5OXnY8tzNQVWb3QQCCo34UJnW1ZnqxfZMHEnNWR3hqRqH-aLO7Ybl2V9DrKw&_nc_zt=23&_nc_ht=scontent.fmnl17-8.fna&_nc_gid=eV21q_Y6E986qsAhn9jdJA&_nc_ss=7b289&oh=00_Af-8DbnuJLp592fkM_o6oENlRZQAd5F6Y1Lgx5MMAxqzsA&oe=6A435DC1')`,
               }}
             />
           </div>
