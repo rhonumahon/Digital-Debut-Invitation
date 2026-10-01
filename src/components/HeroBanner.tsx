@@ -26,7 +26,7 @@ const NAME_GLINTS = [
 
 const GOWN_COPPER = "/assets/images/debut-gown-white.png?v=15";
 const GOWN_BLUE = "/assets/images/debut-gown-blue.png?v=15";
-export const GOWN_CHANGE_AT = new Date("2026-10-02T03:00:00").getTime();
+export const GOWN_CHANGE_AT = new Date("2026-10-02T03:12:00").getTime();
 const WIPE_SECONDS = 16;
 const GOWN_WIPE_MS = WIPE_SECONDS * 1000;
 const TIMEOUT_MAX = 2_147_483_647;
@@ -94,6 +94,17 @@ const CHANGE_GLINTS = Array.from({ length: 96 }, (_, id) => ({
   gold: id % 3 !== 2,
   dot: id % 4 === 0,
 }));
+
+const CHANGE_ORBS = [
+  { id: "o1", left: 8, top: 18, size: 112, delay: 0.05, duration: 1.7, gold: true },
+  { id: "o2", left: 30, top: 56, size: 78, delay: 0.4, duration: 2.05, gold: false },
+  { id: "o3", left: 52, top: 14, size: 96, delay: 0.15, duration: 1.85, gold: true },
+  { id: "o4", left: 74, top: 48, size: 128, delay: 0.28, duration: 1.65, gold: true },
+  { id: "o5", left: 18, top: 74, size: 70, delay: 0.7, duration: 2.15, gold: false },
+  { id: "o6", left: 42, top: 36, size: 104, delay: 0.55, duration: 1.9, gold: true },
+  { id: "o7", left: 88, top: 24, size: 84, delay: 0.22, duration: 1.75, gold: false },
+  { id: "o8", left: 62, top: 70, size: 92, delay: 0.85, duration: 2.1, gold: true },
+];
 
 const PETAL_FILLS = [
   "radial-gradient(ellipse at 35% 30%, #f0c48a, #d4894a 42%, #b87333)",
@@ -206,6 +217,22 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
             </div>
             <div className="gown-haze" />
             <div className="gown-shimmer" />
+          </div>
+          <div className="gown-edge gown-sparks">
+            {CHANGE_ORBS.map((orb) => (
+              <span
+                key={orb.id}
+                className={`change-orb ${orb.gold ? "gold" : ""}`}
+                style={{
+                  left: `${orb.left}%`,
+                  top: `${orb.top}%`,
+                  width: `${orb.size}px`,
+                  height: `${orb.size}px`,
+                  animationDuration: `${orb.duration}s`,
+                  animationDelay: `${orb.delay}s`,
+                }}
+              />
+            ))}
             {CHANGE_GLINTS.map((glint) => (
               <span
                 key={glint.id}
@@ -613,43 +640,76 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
           48%, 100% { background-position: 170% 0; }
         }
 
-        .name-glitter {
-          position: absolute;
-          opacity: 0;
-          background: #fffdf8;
-          clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
-          filter: drop-shadow(0 0 6px rgba(255, 244, 220, 0.95));
-          animation-name: heroGlitter;
-          animation-timing-function: ease-in-out;
-          animation-iteration-count: infinite;
-          z-index: 2;
-        }
-
-        .name-glitter.gold {
-          background: #f6e3b0;
-          filter: drop-shadow(0 0 8px rgba(243, 210, 140, 0.95));
-        }
-
+        .name-glitter,
         .hero-glitter {
           position: absolute;
           opacity: 0;
-          background: #fffdf8;
-          clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
-          filter: drop-shadow(0 0 3px rgba(255, 244, 220, 0.95));
+          color: #fffdf8;
+          background: none;
+          -webkit-animation-name: heroGlitter;
           animation-name: heroGlitter;
+          -webkit-animation-timing-function: ease-in-out;
           animation-timing-function: ease-in-out;
+          -webkit-animation-iteration-count: infinite;
           animation-iteration-count: infinite;
+          -webkit-animation-fill-mode: both;
+          animation-fill-mode: both;
         }
 
-        .hero-glitter.gold {
-          background: #f3d7a2;
-          filter: drop-shadow(0 0 4px rgba(212, 165, 116, 0.95));
+        .name-glitter { z-index: 2; }
+
+        .name-glitter.gold,
+        .hero-glitter.gold { color: #f6e3b0; }
+
+        .name-glitter::before,
+        .hero-glitter::before,
+        .change-glitter::before {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 340%;
+          height: 340%;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(255, 252, 244, 0.95) 0%, rgba(255, 220, 160, 0.55) 28%, rgba(255, 186, 100, 0.16) 52%, transparent 70%);
+          -webkit-transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%);
+        }
+
+        .name-glitter.gold::before,
+        .hero-glitter.gold::before,
+        .change-glitter.gold::before {
+          background: radial-gradient(circle, rgba(255, 244, 210, 0.98) 0%, rgba(255, 196, 110, 0.62) 30%, rgba(226, 140, 60, 0.2) 54%, transparent 72%);
+        }
+
+        .name-glitter::after,
+        .hero-glitter::after,
+        .change-glitter::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: currentColor;
+          -webkit-clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+          clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+        }
+
+        .change-glitter.dot::after {
+          inset: 16%;
+          border-radius: 50%;
+          -webkit-clip-path: none;
+          clip-path: none;
+        }
+
+        @-webkit-keyframes heroGlitter {
+          0%, 100% { opacity: 0; -webkit-transform: translate3d(0, 0, 0) scale(0.35) rotate(0deg); }
+          8% { opacity: 1; -webkit-transform: translate3d(0, 0, 0) scale(1) rotate(16deg); }
+          16% { opacity: 0; -webkit-transform: translate3d(0, 0, 0) scale(0.45) rotate(28deg); }
         }
 
         @keyframes heroGlitter {
-          0%, 100% { opacity: 0; transform: scale(0.35) rotate(0deg); }
-          8% { opacity: 1; transform: scale(1) rotate(16deg); }
-          16% { opacity: 0; transform: scale(0.45) rotate(28deg); }
+          0%, 100% { opacity: 0; transform: translate3d(0, 0, 0) scale(0.35) rotate(0deg); }
+          8% { opacity: 1; transform: translate3d(0, 0, 0) scale(1) rotate(16deg); }
+          16% { opacity: 0; transform: translate3d(0, 0, 0) scale(0.45) rotate(28deg); }
         }
 
         .gown-wipe {
@@ -738,6 +798,10 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
           will-change: transform;
         }
 
+        .gown-sparks {
+          z-index: 2;
+        }
+
         @-webkit-keyframes gownEdge {
           from { -webkit-transform: translate3d(0, 0, 0); transform: translate3d(0, 0, 0); }
           to { -webkit-transform: translate3d(0, 417.65%, 0); transform: translate3d(0, 417.65%, 0); }
@@ -767,36 +831,62 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
           );
         }
 
+        .change-orb {
+          position: absolute;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(255, 252, 244, 0.96) 0%, rgba(255, 226, 170, 0.72) 22%, rgba(255, 186, 110, 0.28) 48%, transparent 72%);
+          -webkit-animation-name: changeOrb;
+          animation-name: changeOrb;
+          -webkit-animation-timing-function: ease-in-out;
+          animation-timing-function: ease-in-out;
+          -webkit-animation-iteration-count: infinite;
+          animation-iteration-count: infinite;
+          -webkit-animation-fill-mode: both;
+          animation-fill-mode: both;
+        }
+
+        .change-orb.gold {
+          background: radial-gradient(circle, rgba(255, 248, 224, 1) 0%, rgba(255, 204, 120, 0.78) 24%, rgba(226, 146, 64, 0.32) 50%, transparent 72%);
+        }
+
         .change-glitter {
           position: absolute;
           opacity: 0;
-          background: #fffdf8;
-          clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
-          filter: drop-shadow(0 0 8px rgba(255, 248, 230, 1));
+          color: #fffdf8;
+          background: none;
+          -webkit-animation-name: changeGlitter;
           animation-name: changeGlitter;
+          -webkit-animation-timing-function: ease-in-out;
           animation-timing-function: ease-in-out;
+          -webkit-animation-iteration-count: infinite;
           animation-iteration-count: infinite;
+          -webkit-animation-fill-mode: both;
+          animation-fill-mode: both;
         }
 
-        .change-glitter.gold {
-          background: #f6e3b0;
-          filter: drop-shadow(0 0 10px rgba(255, 214, 120, 0.95));
+        .change-glitter.gold { color: #f6e3b0; }
+
+        @-webkit-keyframes changeOrb {
+          0%, 100% { opacity: 0.35; -webkit-transform: translate3d(0, 0, 0) scale(0.72); }
+          50% { opacity: 1; -webkit-transform: translate3d(0, 0, 0) scale(1.08); }
         }
 
-        .change-glitter.dot {
-          clip-path: none;
-          border-radius: 50%;
-          background: #fffef8;
-          filter: blur(0.4px) drop-shadow(0 0 7px rgba(255, 248, 220, 1));
+        @keyframes changeOrb {
+          0%, 100% { opacity: 0.35; transform: translate3d(0, 0, 0) scale(0.72); }
+          50% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.08); }
+        }
+
+        @-webkit-keyframes changeGlitter {
+          0%, 100% { opacity: 0; -webkit-transform: translate3d(0, 0, 0) scale(0.3) rotate(0deg); }
+          45% { opacity: 1; -webkit-transform: translate3d(0, 0, 0) scale(1.25) rotate(20deg); }
         }
 
         @keyframes changeGlitter {
-          0%, 100% { opacity: 0; transform: scale(0.25) rotate(0deg); }
-          45% { opacity: 1; transform: scale(1.25) rotate(20deg); }
+          0%, 100% { opacity: 0; transform: translate3d(0, 0, 0) scale(0.3) rotate(0deg); }
+          45% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.25) rotate(20deg); }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .hero-glitter, .name-glitter, .change-glitter { animation: none; opacity: 0; }
           .glass-reflect { animation: none; opacity: 0; }
           .mark-leave { animation: none; opacity: 0; }
           .mark-enter { animation: none; opacity: 1; transform: none; filter: none; }
