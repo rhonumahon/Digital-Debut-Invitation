@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import Reveal from "./Reveal";
 
@@ -42,40 +42,29 @@ export default function DressCodeCard() {
   const [selectedSwatch, setSelectedSwatch] = useState<ColorSwatch>(swatches[0]);
   const [attireRole, setAttireRole] = useState<"ladies" | "lords">("ladies");
   const [slideIndex, setSlideIndex] = useState(0);
-  const slidesRef = useRef<HTMLDivElement>(null);
+  const slide = slides[slideIndex];
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const frame = slidesRef.current;
-    if (!frame) return;
-    let timer = 0;
-    const observer = new IntersectionObserver(([entry]) => {
-      window.clearInterval(timer);
-      if (!entry.isIntersecting) return;
-      timer = window.setInterval(() => {
-        setSlideIndex((current) => (current + 1) % slides.length);
-      }, 2000);
-    }, { threshold: 0.4 });
-    observer.observe(frame);
-    return () => {
-      window.clearInterval(timer);
-      observer.disconnect();
-    };
+    slides.forEach((item) => {
+      const img = new Image();
+      img.src = item.src;
+    });
+    const timer = window.setInterval(() => {
+      setSlideIndex((current) => (current + 1) % slides.length);
+    }, 2000);
+    return () => window.clearInterval(timer);
   }, [slides.length]);
 
   return (
     <Reveal delay={0.28} className="h-full">
     <div className="bronze-card group relative overflow-visible rounded-3xl flex flex-col text-center h-full">
-      <div ref={slidesRef} className="relative aspect-[3/4] overflow-hidden rounded-t-3xl">
-        {slides.map((slide, index) => (
-          <img
-            key={slide.src}
-            src={slide.src}
-            alt={slide.alt}
-            aria-hidden={index !== slideIndex}
-            className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-700 ${index === slideIndex ? "opacity-100" : "opacity-0"}`}
-          />
-        ))}
+      <div className="relative aspect-[3/4] overflow-hidden rounded-t-3xl">
+        <img
+          key={slide.src}
+          src={slide.src}
+          alt={slide.alt}
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
       </div>
 
       <div className="flex flex-1 flex-col justify-between p-8">

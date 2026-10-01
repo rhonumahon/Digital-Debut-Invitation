@@ -38,29 +38,22 @@ export default function DebutantMoment({
   headingKicker,
 }: DebutantMomentProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const slidesRef = useRef<HTMLDivElement>(null);
   const [slideIndex, setSlideIndex] = useState(0);
   const slideCount = slides?.length ?? 0;
+  const slideKey = slides?.map((item) => item.src).join("|") ?? "";
+  const slide = slides?.[slideIndex];
 
   useEffect(() => {
     if (slideCount < 2) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const frame = slidesRef.current;
-    if (!frame) return;
-    let timer = 0;
-    const observer = new IntersectionObserver(([entry]) => {
-      window.clearInterval(timer);
-      if (!entry.isIntersecting) return;
-      timer = window.setInterval(() => {
-        setSlideIndex((current) => (current + 1) % slideCount);
-      }, 2000);
-    }, { threshold: 0.4 });
-    observer.observe(frame);
-    return () => {
-      window.clearInterval(timer);
-      observer.disconnect();
-    };
-  }, [slideCount]);
+    slideKey.split("|").forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+    const timer = window.setInterval(() => {
+      setSlideIndex((current) => (current + 1) % slideCount);
+    }, 2000);
+    return () => window.clearInterval(timer);
+  }, [slideCount, slideKey]);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -114,17 +107,14 @@ export default function DebutantMoment({
       )}
       <Reveal className={`bronze-card mx-auto grid items-stretch gap-0 overflow-hidden rounded-3xl ${columns}`}>
         <figure className={`relative overflow-hidden ${flip ? "md:order-2" : ""}`}>
-          {slides && slides.length > 0 && (
-            <div ref={slidesRef} className={`relative overflow-hidden bg-[#07182e] ${video ? "aspect-[2/3]" : frame}`}>
-              {slides.map((slide, index) => (
-                <img
-                  key={slide.src}
-                  src={slide.src}
-                  alt={slide.alt}
-                  aria-hidden={index !== slideIndex}
-                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${slide.fit ?? "object-center"} ${index === slideIndex ? "opacity-100" : "opacity-0"}`}
-                />
-              ))}
+          {slide && (
+            <div className={`relative overflow-hidden bg-[#07182e] ${video ? "aspect-[2/3]" : frame}`}>
+              <img
+                key={slide.src}
+                src={slide.src}
+                alt={slide.alt}
+                className={`absolute inset-0 h-full w-full object-cover ${slide.fit ?? "object-center"}`}
+              />
             </div>
           )}
           {video ? (

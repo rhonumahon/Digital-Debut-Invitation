@@ -147,6 +147,27 @@ export default function App() {
     };
   }, []);
 
+  const pageBgRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = pageBgRef.current;
+    if (!el) return;
+    const pin = () => {
+      const view = window.visualViewport;
+      if (!view) return;
+      el.style.top = `${view.offsetTop}px`;
+      el.style.height = `${Math.ceil(view.height)}px`;
+    };
+    pin();
+    window.visualViewport?.addEventListener("resize", pin);
+    window.visualViewport?.addEventListener("scroll", pin);
+    window.addEventListener("orientationchange", pin);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", pin);
+      window.visualViewport?.removeEventListener("scroll", pin);
+      window.removeEventListener("orientationchange", pin);
+    };
+  }, []);
+
   const prepareGuest = (nextGuestId: string) => {
     preparingGuest.current = nextGuestId;
     setPromptGuestId(nextGuestId);
@@ -190,9 +211,13 @@ export default function App() {
           then cover scales the photo to the whole page, so a tall phone only
           shows a zoomed slice. */}
       <div
+        ref={pageBgRef}
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-10 min-h-[100lvh] bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/assets/images/rust-navy-bg.jpg')" }}
+        className="pointer-events-none fixed left-0 top-0 -z-10 w-full bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: "url('/assets/images/rust-navy-bg.jpg?v=2')",
+          height: "calc(100lvh + env(safe-area-inset-bottom, 0px))",
+        }}
       />
       
       {/* 
