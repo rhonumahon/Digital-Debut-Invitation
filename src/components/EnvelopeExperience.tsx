@@ -186,8 +186,8 @@ export default function EnvelopeExperience({ onEnter, onPrepare, onOpen }: Envel
           --jx: 54.9%;
           --jy: 47%;
           position: relative;
-          height: min(100%, calc(100vw * 1347 / 862));
-          aspect-ratio: 862 / 1347;
+          width: 100dvw;
+          height: calc(100dvw * 1347 / 862);
           perspective: 1400px;
           transform-style: preserve-3d;
         }
