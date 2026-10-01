@@ -41,7 +41,6 @@ export default function DebutantMoment({
   const [slideIndex, setSlideIndex] = useState(0);
   const slideCount = slides?.length ?? 0;
   const slideKey = slides?.map((item) => item.src).join("|") ?? "";
-  const slide = slides?.[slideIndex];
 
   useEffect(() => {
     if (slideCount < 2) return;
@@ -107,14 +106,21 @@ export default function DebutantMoment({
       )}
       <Reveal className={`bronze-card mx-auto grid items-stretch gap-0 overflow-hidden rounded-3xl ${columns}`}>
         <figure className={`relative overflow-hidden ${flip ? "md:order-2" : ""}`}>
-          {slide && (
+          {slides && slides.length > 0 && (
             <div className={`relative overflow-hidden bg-[#07182e] ${video ? "aspect-[2/3]" : frame}`}>
-              <img
-                key={slide.src}
-                src={slide.src}
-                alt={slide.alt}
-                className={`absolute inset-0 h-full w-full object-cover ${slide.fit ?? "object-center"}`}
-              />
+              {slides.map((item, index) => (
+                <div
+                  key={item.src}
+                  aria-hidden={index !== slideIndex}
+                  className={`absolute inset-0 transition-opacity duration-700 ease-in-out motion-reduce:transition-none [transform:translateZ(0)] ${index === slideIndex ? "z-10 opacity-100" : "z-0 opacity-0"}`}
+                >
+                  <img
+                    src={item.src}
+                    alt={item.alt}
+                    className={`h-full w-full object-cover ${item.fit ?? "object-center"}`}
+                  />
+                </div>
+              ))}
             </div>
           )}
           {video ? (

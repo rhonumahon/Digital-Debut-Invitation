@@ -42,7 +42,6 @@ export default function DressCodeCard() {
   const [selectedSwatch, setSelectedSwatch] = useState<ColorSwatch>(swatches[0]);
   const [attireRole, setAttireRole] = useState<"ladies" | "lords">("ladies");
   const [slideIndex, setSlideIndex] = useState(0);
-  const slide = slides[slideIndex];
 
   useEffect(() => {
     slides.forEach((item) => {
@@ -59,12 +58,15 @@ export default function DressCodeCard() {
     <Reveal delay={0.28} className="h-full">
     <div className="bronze-card group relative overflow-visible rounded-3xl flex flex-col text-center h-full">
       <div className="relative aspect-[3/4] overflow-hidden rounded-t-3xl">
-        <img
-          key={slide.src}
-          src={slide.src}
-          alt={slide.alt}
-          className="absolute inset-0 h-full w-full object-cover object-center"
-        />
+        {slides.map((item, index) => (
+          <div
+            key={item.src}
+            aria-hidden={index !== slideIndex}
+            className={`absolute inset-0 transition-opacity duration-700 ease-in-out motion-reduce:transition-none [transform:translateZ(0)] ${index === slideIndex ? "z-10 opacity-100" : "z-0 opacity-0"}`}
+          >
+            <img src={item.src} alt={item.alt} className="h-full w-full object-cover object-center" />
+          </div>
+        ))}
       </div>
 
       <div className="flex flex-1 flex-col justify-between p-8">
