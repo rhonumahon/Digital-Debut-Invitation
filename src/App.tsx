@@ -18,6 +18,7 @@ import type { FamilyMember } from "./attendance/types";
 import FloatingPetals from "./components/FloatingPetals"; // Imported the new FloatingPetals component
 import EnvelopeExperience from "./components/EnvelopeExperience";
 import GentleNoteCard from "./components/GentleNoteCard";
+import GiftCard from "./components/GiftCard";
 import DebutantMoment from "./components/DebutantMoment";
 import SectionFlourish from "./components/SectionFlourish";
 import Reveal, { RevealReadyProvider } from "./components/Reveal";
@@ -260,7 +261,7 @@ export default function App() {
             <a href="#venue" className="page-jump">Venue</a>
             <a href="#rsvp" className="page-jump">RSVP</a>
             <button type="button" onClick={returnToEnvelope} className="page-jump">
-              Login
+              Log out
             </button>
           </div>
         </nav>
@@ -502,6 +503,8 @@ export default function App() {
 
       {/* Traditional 18 Symbols/Milestones path selector */}
       <SymbolsSection />
+
+      <GiftCard />
 
       {/* Elegant parchment style RSVP pass generator */}
       <RSVPSection
