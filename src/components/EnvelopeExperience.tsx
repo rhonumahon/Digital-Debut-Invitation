@@ -268,6 +268,9 @@ export default function EnvelopeExperience({ onEnter, onPrepare, onOpen }: Envel
         .roses-layer {
           position: absolute;
           inset: 0;
+          width: 100%;
+          height: 100%;
+          min-height: 100lvh;
           background: center / cover no-repeat;
           opacity: 0;
           z-index: 1;
@@ -327,14 +330,16 @@ export default function EnvelopeExperience({ onEnter, onPrepare, onOpen }: Envel
         }
 
         .inv-card {
+          --fit: min(1, (100dvw - 48px) / 432px, (100dvh - 40px) / 630px);
           position: fixed;
           top: 50%; left: 50%;
-          width: min(360px, calc(100vw - 12px));
+          width: 360px;
           height: 520px;
           z-index: 50;
           opacity: 0;
           visibility: hidden;
-          transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%) scale(var(--fit));
+          transform-origin: center center;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -490,7 +495,7 @@ export default function EnvelopeExperience({ onEnter, onPrepare, onOpen }: Envel
           .inv-card.up {
             animation: none;
             opacity: 1;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%) scale(var(--fit));
           }
           .inv-card-flowers-top,
           .inv-card.up .inv-card-flowers-top {
@@ -526,36 +531,6 @@ export default function EnvelopeExperience({ onEnter, onPrepare, onOpen }: Envel
           }
         }
 
-        @media (max-width: 700px), (max-height: 740px) {
-          .inv-card,
-          .inv-card.up {
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            height: 100dvh;
-            transform: none;
-          }
-
-          .inv-inner {
-            box-sizing: border-box;
-            overflow-y: auto;
-            overscroll-behavior: contain;
-            padding-top: max(24px, env(safe-area-inset-top));
-            padding-right: max(16px, env(safe-area-inset-right));
-            padding-bottom: max(24px, env(safe-area-inset-bottom));
-            padding-left: max(16px, env(safe-area-inset-left));
-            -webkit-overflow-scrolling: touch;
-          }
-
-          .inv-card-flowers-top,
-          .inv-card.up .inv-card-flowers-top,
-          .inv-card-flowers-top.mirror,
-          .inv-card.up .inv-card-flowers-top.mirror {
-            top: env(safe-area-inset-top, 0px);
-          }
-        }
-
         /* Overlay floating petals fall */
         .overlay-petal {
           position: absolute;
@@ -588,8 +563,8 @@ export default function EnvelopeExperience({ onEnter, onPrepare, onOpen }: Envel
       {/* Primary Overlay screen loading your scenic painting as a full backdrop */}
       <div 
         id="envelope-wrapper"
-        className={`fixed inset-0 z-[9999] h-dvh min-h-dvh w-full overflow-hidden overscroll-none select-none transition-opacity duration-1000 ease-in-out ${isFading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-        style={{ backgroundColor: "#06101c", height: "100dvh" }}
+        className={`fixed left-0 top-0 z-[9999] h-[100lvh] min-h-[100lvh] w-full overflow-hidden overscroll-none select-none transition-opacity duration-1000 ease-in-out ${isFading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        style={{ backgroundColor: "#06101c", width: "100%", height: "100lvh", minHeight: "100lvh" }}
       >
         <div className="scene-glitter" aria-hidden="true">
           {glints.map((glint) => (
