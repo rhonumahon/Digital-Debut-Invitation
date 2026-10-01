@@ -1,50 +1,9 @@
-import { useEffect, useRef } from "react";
 import Reveal from "./Reveal";
 import SectionFlourish from "./SectionFlourish";
 
 const QR_IMAGE = "/assets/images/gcash-qr.jpg?v=2";
 
-function gcashAppUrl() {
-  if (typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent)) {
-    return "intent://#Intent;scheme=gcash;package=com.globe.gcash.android;end";
-  }
-  return "gcash://";
-}
-
 export default function GiftCard() {
-  const qrFile = useRef<File | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(QR_IMAGE)
-      .then((response) => response.blob())
-      .then((blob) => {
-        if (!cancelled) qrFile.current = new File([blob], "jaylyn-gcash-qr.jpg", { type: "image/jpeg" });
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const openGcash = async () => {
-    const file = qrFile.current;
-    const canShareFile = Boolean(file && navigator.canShare?.({ files: [file] }));
-    if (file && canShareFile) {
-      try {
-        await navigator.share({ files: [file], title: "GCash QR" });
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-      }
-    } else {
-      const link = document.createElement("a");
-      link.href = QR_IMAGE;
-      link.download = "jaylyn-gcash-qr.jpg";
-      link.click();
-    }
-    window.location.href = gcashAppUrl();
-  };
-
   return (
     <section className="px-6 md:px-12 pt-4 pb-8" id="gift">
       <SectionFlourish />
@@ -70,20 +29,7 @@ export default function GiftCard() {
           <p className="font-cinzel text-base tracking-[0.12em] uppercase text-[#7a3e18] mt-4">
             GCash · RO****N U.
           </p>
-          <button type="button" className="invite-btn mt-5 w-full" onClick={openGcash}>
-            Open in GCash
-          </button>
-          <a
-            href={QR_IMAGE}
-            download="jaylyn-gcash-qr.jpg"
-            className="mt-4 inline-block font-garamond text-lg text-[#7a3e18] underline decoration-[#c4894a] underline-offset-4"
-          >
-            Save QR code
-          </a>
           <p className="font-garamond text-base text-[#8a5a32] mt-4 leading-relaxed">
-            Save the code, then in GCash tap QR and upload it. The account opens from the code.
-          </p>
-          <p className="font-garamond text-base text-[#8a5a32] mt-2 leading-relaxed">
             GCash to GCash is free. A fee may apply if you send from another bank.
           </p>
         </div>
