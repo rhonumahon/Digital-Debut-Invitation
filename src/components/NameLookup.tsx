@@ -60,7 +60,7 @@ export default function NameLookup({ onChange, tone = "page" }: NameLookupProps)
         }`}
       />
       {open && (
-        <ul className={`absolute z-30 mt-1 max-h-48 w-full overflow-auto rounded-lg border shadow-xl ${onCard ? "border-[#f09060]/70 bg-[#07182e]" : "border-[#c4894a] bg-[#fff8ee]"}`}>
+        <ul className={`name-results absolute z-30 mt-1 max-h-48 w-full overflow-auto overscroll-contain rounded-lg border shadow-xl ${onCard ? "border-[#f09060]/70 bg-[#07182e]" : "border-[#c4894a] bg-[#fff8ee]"}`}>
           {matches.map((match) => (
             <li key={match.id}>
               <button

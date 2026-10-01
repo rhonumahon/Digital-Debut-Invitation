@@ -38,7 +38,35 @@ export default function EnvelopeExperience({ onEnter, onPrepare, onOpen }: Envel
   const [cardGlints, setCardGlints] = useState<Array<{ id: number; left: number; top: number; delay: number; duration: number; size: number; gold: boolean }>>([]);
 
   useEffect(() => {
-    // Generate beautiful landing particles
+    const html = document.documentElement;
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const previous = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyWidth: body.style.width,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+    };
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.width = "100%";
+    body.style.left = "0";
+    body.style.top = `-${scrollY}px`;
+    return () => {
+      html.style.overflow = previous.htmlOverflow;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.position = previous.bodyPosition;
+      body.style.width = previous.bodyWidth;
+      body.style.top = previous.bodyTop;
+      body.style.left = previous.bodyLeft;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  useEffect(() => {
     const tempPetals = Array.from({ length: 15 }).map((_, i) => ({
       id: i,
       left: Math.random() * 100,
@@ -498,6 +526,36 @@ export default function EnvelopeExperience({ onEnter, onPrepare, onOpen }: Envel
           }
         }
 
+        @media (max-width: 700px), (max-height: 740px) {
+          .inv-card,
+          .inv-card.up {
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            transform: none;
+          }
+
+          .inv-inner {
+            box-sizing: border-box;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding-top: max(24px, env(safe-area-inset-top));
+            padding-right: max(16px, env(safe-area-inset-right));
+            padding-bottom: max(24px, env(safe-area-inset-bottom));
+            padding-left: max(16px, env(safe-area-inset-left));
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .inv-card-flowers-top,
+          .inv-card.up .inv-card-flowers-top,
+          .inv-card-flowers-top.mirror,
+          .inv-card.up .inv-card-flowers-top.mirror {
+            top: env(safe-area-inset-top, 0px);
+          }
+        }
+
         /* Overlay floating petals fall */
         .overlay-petal {
           position: absolute;
@@ -530,8 +588,8 @@ export default function EnvelopeExperience({ onEnter, onPrepare, onOpen }: Envel
       {/* Primary Overlay screen loading your scenic painting as a full backdrop */}
       <div 
         id="envelope-wrapper"
-        className={`fixed inset-0 z-[9999] overflow-hidden select-none transition-opacity duration-1000 ease-in-out ${isFading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-        style={{ backgroundColor: "#06101c" }}
+        className={`fixed inset-0 z-[9999] h-dvh min-h-dvh w-full overflow-hidden overscroll-none select-none transition-opacity duration-1000 ease-in-out ${isFading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        style={{ backgroundColor: "#06101c", height: "100dvh" }}
       >
         <div className="scene-glitter" aria-hidden="true">
           {glints.map((glint) => (
