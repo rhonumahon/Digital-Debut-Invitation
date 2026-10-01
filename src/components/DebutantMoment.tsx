@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import FadeSlides from "./FadeSlides";
 import Reveal from "./Reveal";
 import SectionFlourish from "./SectionFlourish";
 
@@ -38,21 +39,6 @@ export default function DebutantMoment({
   headingKicker,
 }: DebutantMomentProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [slideIndex, setSlideIndex] = useState(0);
-  const slideCount = slides?.length ?? 0;
-  const slideKey = slides?.map((item) => item.src).join("|") ?? "";
-
-  useEffect(() => {
-    if (slideCount < 2) return;
-    slideKey.split("|").forEach((src) => {
-      const img = new Image();
-      img.src = src;
-    });
-    const timer = window.setInterval(() => {
-      setSlideIndex((current) => (current + 1) % slideCount);
-    }, 2000);
-    return () => window.clearInterval(timer);
-  }, [slideCount, slideKey]);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -108,19 +94,7 @@ export default function DebutantMoment({
         <figure className={`relative overflow-hidden ${flip ? "md:order-2" : ""}`}>
           {slides && slides.length > 0 && (
             <div className={`relative overflow-hidden bg-[#07182e] ${video ? "aspect-[2/3]" : frame}`}>
-              {slides.map((item, index) => (
-                <div
-                  key={item.src}
-                  aria-hidden={index !== slideIndex}
-                  className={`absolute inset-0 transition-opacity duration-700 ease-in-out motion-reduce:transition-none [transform:translateZ(0)] ${index === slideIndex ? "z-10 opacity-100" : "z-0 opacity-0"}`}
-                >
-                  <img
-                    src={item.src}
-                    alt={item.alt}
-                    className={`h-full w-full object-cover ${item.fit ?? "object-center"}`}
-                  />
-                </div>
-              ))}
+              <FadeSlides slides={slides} />
             </div>
           )}
           {video ? (

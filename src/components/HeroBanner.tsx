@@ -26,7 +26,7 @@ const NAME_GLINTS = [
 
 const GOWN_COPPER = "/assets/images/debut-gown-white.png?v=15";
 const GOWN_BLUE = "/assets/images/debut-gown-blue.png?v=15";
-export const GOWN_CHANGE_AT = new Date("2026-10-02T02:00:00").getTime();
+export const GOWN_CHANGE_AT = new Date("2026-10-02T02:20:00").getTime();
 const WIPE_SECONDS = 16;
 const GOWN_WIPE_MS = WIPE_SECONDS * 1000;
 const TIMEOUT_MAX = 2_147_483_647;
@@ -66,8 +66,7 @@ function useCelebrationGown() {
     const arm = () => {
       const wait = GOWN_CHANGE_AT - Date.now();
       if (wait <= 0) {
-        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        setPhase(reduce ? "blue" : "wiping");
+        setPhase("wiping");
         return;
       }
       timer = window.setTimeout(arm, Math.min(wait, TIMEOUT_MAX));
@@ -130,15 +129,8 @@ function useHeroMark(gownPhase: "copper" | "wiping" | "blue") {
       return;
     }
     if (gownPhase !== "wiping") return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const wait = Math.max(0, lightPassDelay() - (Date.now() - GOWN_CHANGE_AT));
-    const timer = window.setTimeout(() => {
-      if (reduce) {
-        setSettled(true);
-        return;
-      }
-      setEasing(true);
-    }, wait);
+    const timer = window.setTimeout(() => setEasing(true), wait);
     return () => window.clearTimeout(timer);
   }, [gownPhase]);
 
@@ -198,10 +190,9 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
         style={{ backgroundImage: `url('${GOWN_COPPER}')` }}
       />
       {gownPhase !== "copper" && (
-        <div
-          className={`hero-scene absolute inset-0 z-0 ${gownPhase === "wiping" ? "gown-wipe" : ""}`}
-          style={{ backgroundImage: `url('${GOWN_BLUE}')` }}
-        />
+        <div className={`absolute inset-0 z-0 ${gownPhase === "wiping" ? "gown-wipe" : ""}`}>
+          <img src={GOWN_BLUE} alt="" className="hero-gown" />
+        </div>
       )}
       {gownPhase === "wiping" && (
         <div className="gown-magic absolute inset-0 z-[15] overflow-hidden pointer-events-none" aria-hidden="true">
@@ -402,10 +393,31 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
           background-size: auto 100%;
         }
 
+        .hero-gown {
+          position: absolute;
+          left: 50%;
+          bottom: 0;
+          height: 100%;
+          width: auto;
+          max-width: none;
+          transform: translateX(-50%);
+        }
+
         @media (max-aspect-ratio: 9/16) {
           .hero-scene {
             background-position: center top;
             background-size: cover;
+          }
+
+          .hero-gown {
+            left: 0;
+            bottom: auto;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
+            transform: none;
           }
         }
 
@@ -634,44 +646,23 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
         }
 
         .gown-wipe {
-          -webkit-mask-image: linear-gradient(
-            to bottom,
-            #000 0%,
-            #000 44.25%,
-            rgba(0, 0, 0, 0.82) 47.2%,
-            rgba(0, 0, 0, 0.4) 51%,
-            rgba(0, 0, 0, 0.08) 54.4%,
-            transparent 55.75%,
-            transparent 100%
-          );
-          mask-image: linear-gradient(
-            to bottom,
-            #000 0%,
-            #000 44.25%,
-            rgba(0, 0, 0, 0.82) 47.2%,
-            rgba(0, 0, 0, 0.4) 51%,
-            rgba(0, 0, 0, 0.08) 54.4%,
-            transparent 55.75%,
-            transparent 100%
-          );
-          -webkit-mask-size: 100% 226%;
-          mask-size: 100% 226%;
-          -webkit-mask-repeat: no-repeat;
-          mask-repeat: no-repeat;
-          -webkit-mask-position: center 100%;
-          mask-position: center 100%;
+          -webkit-clip-path: inset(0 0 100% 0);
+          clip-path: inset(0 0 100% 0);
+          -webkit-animation: gownWipe ${WIPE_SECONDS}s linear forwards;
           animation: gownWipe ${WIPE_SECONDS}s linear forwards;
+          will-change: clip-path;
+        }
+
+        @-webkit-keyframes gownWipe {
+          0% { -webkit-clip-path: inset(0 0 100% 0); clip-path: inset(0 0 100% 0); }
+          79% { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
+          100% { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
         }
 
         @keyframes gownWipe {
-          from {
-            -webkit-mask-position: center 100%;
-            mask-position: center 100%;
-          }
-          to {
-            -webkit-mask-position: center 0%;
-            mask-position: center 0%;
-          }
+          0% { clip-path: inset(0 0 100% 0); }
+          79% { clip-path: inset(0 0 0 0); }
+          100% { clip-path: inset(0 0 0 0); }
         }
 
         .gown-edge {
@@ -680,35 +671,38 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
           width: 116%;
           height: 34%;
           top: -34%;
+          -webkit-animation: gownEdge ${WIPE_SECONDS}s linear forwards;
           animation: gownEdge ${WIPE_SECONDS}s linear forwards;
+          will-change: transform;
+        }
+
+        @-webkit-keyframes gownEdge {
+          from { -webkit-transform: translate3d(0, 0, 0); transform: translate3d(0, 0, 0); }
+          to { -webkit-transform: translate3d(0, 417.65%, 0); transform: translate3d(0, 417.65%, 0); }
         }
 
         @keyframes gownEdge {
-          from { top: -34%; }
-          to { top: 108%; }
+          from { transform: translate3d(0, 0, 0); }
+          to { transform: translate3d(0, 417.65%, 0); }
         }
 
         .gown-haze {
           position: absolute;
-          inset: -12% -4%;
-          background: radial-gradient(ellipse at 50% 55%, rgba(255, 236, 196, 0.72), rgba(255, 214, 140, 0.28) 46%, transparent 72%);
-          filter: blur(18px);
-          mix-blend-mode: screen;
+          inset: -18% -6%;
+          background: radial-gradient(ellipse at 50% 55%, rgba(255, 236, 196, 0.92), rgba(255, 196, 110, 0.55) 42%, rgba(255, 160, 70, 0.18) 68%, transparent 78%);
         }
 
         .gown-shimmer {
           position: absolute;
-          inset: 8% 0 6%;
+          inset: 6% 0 4%;
           background: linear-gradient(
             to bottom,
             transparent 0%,
-            rgba(255, 244, 214, 0.2) 30%,
-            rgba(255, 252, 244, 0.92) 50%,
-            rgba(243, 206, 130, 0.4) 68%,
+            rgba(255, 228, 170, 0.45) 24%,
+            rgba(255, 252, 244, 0.96) 50%,
+            rgba(255, 196, 110, 0.55) 74%,
             transparent 100%
           );
-          filter: blur(14px);
-          mix-blend-mode: screen;
         }
 
         .change-glitter {
@@ -741,10 +735,10 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
 
         @media (prefers-reduced-motion: reduce) {
           .hero-glitter, .name-glitter, .change-glitter { animation: none; opacity: 0; }
-          .glass-reflect, .gown-shimmer, .gown-haze, .gown-edge { animation: none; opacity: 0; }
+          .glass-reflect { animation: none; opacity: 0; }
           .mark-leave { animation: none; opacity: 0; }
           .mark-enter { animation: none; opacity: 1; transform: none; filter: none; }
-          .hero-title-in, .hero-copy-late, .hero-scroll, .hero-scroll-chevron, .gown-wipe { animation: none; }
+          .hero-title-in, .hero-copy-late, .hero-scroll, .hero-scroll-chevron { animation: none; }
           .hero-scroll { opacity: 1; }
         }
 

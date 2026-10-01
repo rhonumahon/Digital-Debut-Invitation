@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Check } from "lucide-react";
+import FadeSlides from "./FadeSlides";
 import Reveal from "./Reveal";
 
 interface ColorSwatch {
@@ -41,32 +42,12 @@ export default function DressCodeCard() {
 
   const [selectedSwatch, setSelectedSwatch] = useState<ColorSwatch>(swatches[0]);
   const [attireRole, setAttireRole] = useState<"ladies" | "lords">("ladies");
-  const [slideIndex, setSlideIndex] = useState(0);
-
-  useEffect(() => {
-    slides.forEach((item) => {
-      const img = new Image();
-      img.src = item.src;
-    });
-    const timer = window.setInterval(() => {
-      setSlideIndex((current) => (current + 1) % slides.length);
-    }, 2000);
-    return () => window.clearInterval(timer);
-  }, [slides.length]);
 
   return (
     <Reveal delay={0.28} className="h-full">
     <div className="bronze-card group relative overflow-visible rounded-3xl flex flex-col text-center h-full">
       <div className="relative aspect-[3/4] overflow-hidden rounded-t-3xl">
-        {slides.map((item, index) => (
-          <div
-            key={item.src}
-            aria-hidden={index !== slideIndex}
-            className={`absolute inset-0 transition-opacity duration-700 ease-in-out motion-reduce:transition-none [transform:translateZ(0)] ${index === slideIndex ? "z-10 opacity-100" : "z-0 opacity-0"}`}
-          >
-            <img src={item.src} alt={item.alt} className="h-full w-full object-cover object-center" />
-          </div>
-        ))}
+        <FadeSlides slides={slides} />
       </div>
 
       <div className="flex flex-1 flex-col justify-between p-8">
