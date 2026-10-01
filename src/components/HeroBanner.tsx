@@ -26,7 +26,7 @@ const NAME_GLINTS = [
 
 const GOWN_COPPER = "/assets/images/debut-gown-white.png?v=15";
 const GOWN_BLUE = "/assets/images/debut-gown-blue.png?v=15";
-export const GOWN_CHANGE_AT = new Date("2026-10-02T02:20:00").getTime();
+export const GOWN_CHANGE_AT = new Date("2026-10-02T02:28:00").getTime();
 const WIPE_SECONDS = 16;
 const GOWN_WIPE_MS = WIPE_SECONDS * 1000;
 const TIMEOUT_MAX = 2_147_483_647;
@@ -197,6 +197,11 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
       {gownPhase === "wiping" && (
         <div className="gown-magic absolute inset-0 z-[15] overflow-hidden pointer-events-none" aria-hidden="true">
           <div className="gown-edge">
+            <div className="gown-feather" aria-hidden="true">
+              <div className="gown-feather-shift">
+                <img src={GOWN_BLUE} alt="" className="hero-gown" />
+              </div>
+            </div>
             <div className="gown-haze" />
             <div className="gown-shimmer" />
             {CHANGE_GLINTS.map((glint) => (
@@ -654,15 +659,62 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
         }
 
         @-webkit-keyframes gownWipe {
-          0% { -webkit-clip-path: inset(0 0 100% 0); clip-path: inset(0 0 100% 0); }
-          79% { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
-          100% { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
+          0%, 17% { -webkit-clip-path: inset(0 0 100% 0); clip-path: inset(0 0 100% 0); }
+          87%, 100% { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
         }
 
         @keyframes gownWipe {
-          0% { clip-path: inset(0 0 100% 0); }
-          79% { clip-path: inset(0 0 0 0); }
-          100% { clip-path: inset(0 0 0 0); }
+          0%, 17% { clip-path: inset(0 0 100% 0); }
+          87%, 100% { clip-path: inset(0 0 0 0); }
+        }
+
+        .gown-feather {
+          position: absolute;
+          inset: -8% 0 -42%;
+          -webkit-mask-image: linear-gradient(
+            to bottom,
+            transparent 0%,
+            transparent 16%,
+            rgba(0, 0, 0, 0.4) 24%,
+            #000 34%,
+            rgba(0, 0, 0, 0.62) 58%,
+            rgba(0, 0, 0, 0.18) 82%,
+            transparent 100%
+          );
+          mask-image: linear-gradient(
+            to bottom,
+            transparent 0%,
+            transparent 16%,
+            rgba(0, 0, 0, 0.4) 24%,
+            #000 34%,
+            rgba(0, 0, 0, 0.62) 58%,
+            rgba(0, 0, 0, 0.18) 82%,
+            transparent 100%
+          );
+          -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+          filter: blur(18px);
+          transform: translateZ(0);
+        }
+
+        .gown-feather-shift {
+          position: absolute;
+          left: 6.897%;
+          width: 86.207%;
+          top: 72%;
+          height: 196.08%;
+          -webkit-animation: gownFeatherLock ${WIPE_SECONDS}s linear forwards;
+          animation: gownFeatherLock ${WIPE_SECONDS}s linear forwards;
+        }
+
+        @-webkit-keyframes gownFeatherLock {
+          from { -webkit-transform: translate3d(0, 0, 0); transform: translate3d(0, 0, 0); }
+          to { -webkit-transform: translate3d(0, -142%, 0); transform: translate3d(0, -142%, 0); }
+        }
+
+        @keyframes gownFeatherLock {
+          from { transform: translate3d(0, 0, 0); }
+          to { transform: translate3d(0, -142%, 0); }
         }
 
         .gown-edge {
@@ -688,21 +740,23 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
 
         .gown-haze {
           position: absolute;
-          inset: -18% -6%;
-          background: radial-gradient(ellipse at 50% 55%, rgba(255, 236, 196, 0.92), rgba(255, 196, 110, 0.55) 42%, rgba(255, 160, 70, 0.18) 68%, transparent 78%);
+          inset: -28% -8%;
+          background: radial-gradient(ellipse at 50% 58%, rgba(255, 236, 196, 0.95), rgba(255, 196, 110, 0.62) 40%, rgba(255, 160, 70, 0.22) 64%, transparent 80%);
+          filter: blur(22px);
         }
 
         .gown-shimmer {
           position: absolute;
-          inset: 6% 0 4%;
+          inset: 2% 0 0;
           background: linear-gradient(
             to bottom,
             transparent 0%,
-            rgba(255, 228, 170, 0.45) 24%,
-            rgba(255, 252, 244, 0.96) 50%,
-            rgba(255, 196, 110, 0.55) 74%,
+            rgba(255, 228, 170, 0.35) 22%,
+            rgba(255, 252, 244, 0.88) 48%,
+            rgba(255, 196, 110, 0.4) 70%,
             transparent 100%
           );
+          filter: blur(16px);
         }
 
         .change-glitter {
