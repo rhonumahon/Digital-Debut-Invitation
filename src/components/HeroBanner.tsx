@@ -24,9 +24,9 @@ const NAME_GLINTS = [
   { left: "12%", top: "78%", size: 15, delay: 1.8, duration: 2.2, gold: false },
 ];
 
-const GOWN_COPPER = "/assets/images/debut-gown-white.png?v=14";
+const GOWN_COPPER = "/assets/images/debut-gown-white.png?v=15";
 const GOWN_BLUE = "/assets/images/debut-gown-blue.png?v=15";
-export const GOWN_CHANGE_AT = new Date("2026-11-07T17:30:00").getTime();
+export const GOWN_CHANGE_AT = new Date("2026-10-02T02:00:00").getTime();
 const WIPE_SECONDS = 16;
 const GOWN_WIPE_MS = WIPE_SECONDS * 1000;
 const TIMEOUT_MAX = 2_147_483_647;
