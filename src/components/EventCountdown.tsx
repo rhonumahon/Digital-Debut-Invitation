@@ -91,8 +91,8 @@ function LiveClock({ now }: { now: Date }) {
 }
 
 export default function EventCountdown() {
-  // Guests arrive at 5:00 PM. The countdown runs to the 5:30 PM grand entry.
-  const eventDate = new Date("2026-10-02T03:12:00").getTime();
+  // Guests arrive at 5:00 PM. The countdown runs to the 5:40 PM grand entry.
+  const eventDate = new Date("2026-11-07T17:40:00").getTime();
 
   const calculateTimeLeft = (nowMs: number): TimeLeft => {
     const difference = eventDate - nowMs;
