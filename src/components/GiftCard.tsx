@@ -2,13 +2,11 @@ import { useState } from "react";
 import Reveal from "./Reveal";
 import SectionFlourish from "./SectionFlourish";
 
-const GCASH_QR =
-  "00020101021127830012com.p2pqrpay0111GXCHPHM2XXX02089996440303152170200000006560417DWQM4TK3JDNWDGOB25204601653036085802PH5910RO****N U.6009CALICANTO6104123463045538";
-
+const GCASH_NUMBER = "09165226110";
 const QR_IMAGE = "/assets/images/gcash-qr.jpg?v=2";
 
 function gcashOpenUrl() {
-  const path = `com.mynt.gcash/app/006300000800?qrCode=${encodeURIComponent(GCASH_QR)}`;
+  const path = `com.mynt.gcash/app/006300000300?recipient=${GCASH_NUMBER}&mobileNumber=${GCASH_NUMBER}`;
   if (typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent)) {
     return `intent://${path}#Intent;scheme=gcash;package=com.globe.gcash.android;end`;
   }
@@ -54,6 +52,7 @@ export default function GiftCard() {
           <p className="font-cinzel text-base tracking-[0.12em] uppercase text-[#7a3e18] mt-4">
             GCash · RO****N U.
           </p>
+          <p className="font-garamond text-2xl text-[#5c3418] mt-1 tracking-wide">0916 522 6110</p>
           <a
             href={openUrl}
             className="invite-btn mt-5 inline-flex w-full items-center justify-center"
@@ -76,7 +75,7 @@ export default function GiftCard() {
           </p>
           {needsUpload && (
             <p className="font-garamond text-base text-[#5c3418] mt-3 leading-relaxed">
-              If GCash did not open, save the code, then in the app tap QR and upload it. The account is already in the code.
+              If GCash did not open, save the code and upload it under QR, or send to 0916 522 6110.
             </p>
           )}
         </div>
