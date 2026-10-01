@@ -185,10 +185,15 @@ export default function App() {
   };
 
   return (
-    <div
-      className="text-soft-ink font-garamond min-h-screen selection:bg-primary-rose-light/30 selection:text-[#07182e] transition-colors duration-300 relative bg-cover bg-center bg-fixed"
-      style={{ backgroundImage: "url('/assets/images/rust-navy-bg.jpg')" }}
-    >
+    <div className="text-soft-ink font-garamond min-h-screen selection:bg-primary-rose-light/30 selection:text-[#07182e] transition-colors duration-300 relative isolate">
+      {/* Viewport-sized layer. background-attachment:fixed is ignored by iOS and
+          then cover scales the photo to the whole page, so a tall phone only
+          shows a zoomed slice. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-10 min-h-[100lvh] bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/assets/images/rust-navy-bg.jpg')" }}
+      />
       
       {/* 
         Global Floating Petals Overlay:

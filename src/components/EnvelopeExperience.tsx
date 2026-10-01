@@ -15,7 +15,7 @@ interface EnvelopeExperienceProps {
 }
 
 // Set your background and wax seal image paths here
-const ENVELOPE_IMAGE = "/assets/images/envelop-closed.png?v=5";
+const ENVELOPE_IMAGE = "/assets/images/envelop-closed.png?v=6";
 const SEAL_IMAGE = "/assets/images/seal.png";
 const ROSES_SCENE_IMAGE = "/assets/images/fall-wedding.png";
 const PETAL_FILLS = [
@@ -195,7 +195,7 @@ export default function EnvelopeExperience({ onEnter, onPrepare, onOpen }: Envel
         .env-slice {
           position: absolute;
           inset: 0;
-          background: url("/assets/images/envelop-closed.png?v=5") center / 100% 100% no-repeat;
+          background: url("/assets/images/envelop-closed.png?v=6") center / 100% 100% no-repeat;
           backface-visibility: hidden;
           transform-style: preserve-3d;
           transition: transform 1.7s ease 1.35s, opacity 0.7s ease 2.85s;
