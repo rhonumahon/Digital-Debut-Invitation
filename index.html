@@ -3,10 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trisha's 18th</title>
+    <title>Jaylyn Eirielle's 18th</title>
   </head>
   <body>
     <div id="root"></div>
+    <audio id="invitation-audio" preload="auto" playsinline loop src="/assets/intro.mp3"></audio>
+    <script>
+      (function () {
+        var audio = document.getElementById("invitation-audio");
+        var returning = false;
+        try {
+          returning = !!localStorage.getItem("jaylyn-guest-id");
+        } catch (e) {}
+        if (!audio || !returning) return;
+
+        var events = ["pointerup", "click", "touchend", "keydown"];
+        function detach() {
+          events.forEach(function (type) {
+            window.removeEventListener(type, start, true);
+          });
+        }
+        function start() {
+          if (window.__invitationMusicHeld) {
+            detach();
+            return;
+          }
+          audio.muted = false;
+          audio.volume = 0.35;
+          var pending = audio.play();
+          if (pending && pending.then) {
+            pending.then(detach).catch(function () {});
+          }
+        }
+        events.forEach(function (type) {
+          window.addEventListener(type, start, true);
+        });
+        audio.autoplay = true;
+        start();
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

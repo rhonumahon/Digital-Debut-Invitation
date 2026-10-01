@@ -5,23 +5,37 @@
 
 import { useState, useEffect } from "react";
 import { Sparkles } from "lucide-react";
+import type { NameMatch } from "../attendance/types";
+import NameLookup from "./NameLookup";
 
 interface EnvelopeExperienceProps {
-  onEnter: () => void;
+  onEnter: (guestId: string) => void;
+  onPrepare?: (guestId: string) => void;
+  onOpen?: () => void;
 }
 
 // Set your background and wax seal image paths here
-const BACKROUND_SCENE_IMAGE = "/assets/images/bridgerton.png";
-const WAX_SEAL_IMAGE = "/assets/images/seal.png";
+const ENVELOPE_IMAGE = "/assets/images/envelop-closed.png?v=5";
+const SEAL_IMAGE = "/assets/images/seal.png";
+const ROSES_SCENE_IMAGE = "/assets/images/fall-wedding.png";
+const PETAL_FILLS = [
+  "radial-gradient(ellipse at 40% 30%, #f0c48a, #d4894a 42%, #b87333)",
+  "radial-gradient(ellipse at 40% 30%, #f2b56a, #e07a3d 40%, #c45a22)",
+  "radial-gradient(ellipse at 40% 30%, #e8c49a, #c9956b 36%, #d4783a)",
+];
 
-export default function EnvelopeExperience({ onEnter }: EnvelopeExperienceProps) {
+export default function EnvelopeExperience({ onEnter, onPrepare, onOpen }: EnvelopeExperienceProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [scenePhase, setScenePhase] = useState<"sealed" | "wash" | "roses">("sealed");
   const [isCardUp, setIsCardUp] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [isFading, setIsFading] = useState(false);
+  const [pickedGuest, setPickedGuest] = useState<NameMatch | null>(null);
 
   // Simple particle system for the landing overlay
   const [bgPetals, setBgPetals] = useState<Array<{ id: number; left: number; delay: number; duration: number; size: number }>>([]);
+  const [glints, setGlints] = useState<Array<{ id: number; left: number; top: number; delay: number; duration: number; size: number; gold: boolean }>>([]);
+  const [cardGlints, setCardGlints] = useState<Array<{ id: number; left: number; top: number; delay: number; duration: number; size: number; gold: boolean }>>([]);
 
   useEffect(() => {
     // Generate beautiful landing particles
@@ -33,25 +47,67 @@ export default function EnvelopeExperience({ onEnter }: EnvelopeExperienceProps)
       size: 10 + Math.random() * 12,
     }));
     setBgPetals(tempPetals);
+
+    const tempGlints = Array.from({ length: 36 }).map((_, i) => ({
+      id: i,
+      left: 4 + Math.random() * 92,
+      top: 3 + Math.random() * 62,
+      delay: -(Math.random() * 3.2),
+      duration: 1.8 + Math.random() * 2.2,
+      size: 5 + Math.random() * 3,
+      gold: i % 2 === 0,
+    }));
+    setGlints(tempGlints);
+
+    const tempCardGlints = Array.from({ length: 16 }).map((_, i) => ({
+      id: i,
+      left: 8 + Math.random() * 84,
+      top: 8 + Math.random() * 84,
+      delay: -(Math.random() * 3.2),
+      duration: 1.8 + Math.random() * 2.2,
+      size: 3 + Math.random() * 2.5,
+      gold: i % 2 === 0,
+    }));
+    setCardGlints(tempCardGlints);
   }, []);
 
   const handleOpenFlap = () => {
     if (isOpen) return;
     setIsOpen(true);
-    
-    // After flap starts rotating, raise the card
-    setTimeout(() => {
+    setScenePhase("roses");
+    onOpen?.();
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const flap = document.querySelector<HTMLElement>(".env-slice.bottom");
+    if (reduceMotion || !flap) {
+      window.setTimeout(() => setIsCardUp(true), reduceMotion ? 320 : 3050);
+      return;
+    }
+
+    let shown = false;
+    const showCard = () => {
+      if (shown) return;
+      shown = true;
+      flap.removeEventListener("transitionend", onFlapOpen);
       setIsCardUp(true);
-    }, 650);
+    };
+    const onFlapOpen = (event: Event) => {
+      const transition = event as TransitionEvent;
+      if (transition.target !== flap || transition.propertyName !== "transform") return;
+      showCard();
+    };
+    flap.addEventListener("transitionend", onFlapOpen);
+    window.setTimeout(showCard, 3050);
   };
 
   const handleEnterCelebration = () => {
-    // Start fade output transition
+    if (!pickedGuest) return;
+    onPrepare?.(pickedGuest.id);
     setIsFading(true);
-    
+
     setTimeout(() => {
       setIsDismissed(true);
-      onEnter(); // notify parent to initialize general scene elements
+      onEnter(pickedGuest.id);
     }, 950);
   };
 
@@ -82,142 +138,175 @@ export default function EnvelopeExperience({ onEnter }: EnvelopeExperienceProps)
           --warm:        #fef0e0;
         }
 
-        .env-scene {
-          position: relative;
-          width: min(320px, 90vw);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          z-index: 20;
-        }
-
-        /* Envelope core sizing and relative styles */
-        .envelope-container {
-          position: relative;
-          width: min(320px, 90vw);
-          height: 190px;
-          background: linear-gradient(160deg, #fffbfd, #fef5f8);
-          border: 1.5px solid rgba(196,96,122,0.2);
-          border-radius: 6px;
-          box-shadow: 
-            0 14px 40px rgba(139,58,82,0.15),
-            0 0 0 4px rgba(242,196,208,0.12);
-          overflow: hidden;
-          z-index: 10;
-        }
-
-        .env-flap-wrap {
+        .photo-env {
           position: absolute;
-          top: 0; left: 0; right: 0;
-          height: 0;
-          transform-origin: top center;
-          transform-style: preserve-3d;
-          transition: transform 0.75s cubic-bezier(0.4, 0, 0.2, 1);
-          z-index: 15;
-        }
-
-        .env-flap-wrap.open {
-          transform: rotateX(-180deg);
-          z-index: 5; /* push back when opened to let card peek out */
-        }
-
-        .env-flap {
-          width: 0; height: 0;
-          border-left: calc(min(320px, 90vw) / 2) solid transparent;
-          border-right: calc(min(320px, 90vw) / 2) solid transparent;
-          border-top: calc(min(320px, 90vw) * 0.42) solid #fff8fa;
-          filter: drop-shadow(0 2px 4px rgba(196,96,122,0.15));
-        }
-
-        .env-pocket {
-          position: absolute;
-          bottom: 0; left: 0; right: 0;
-          height: 96px;
-          background: linear-gradient(160deg, #fff8fa, #fef5f8);
-          border-top: 1px solid rgba(196,96,122,0.1);
-          padding: 16px 16px;
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
+          inset: 0;
           z-index: 12;
-        }
-
-        /* Sealed Button Interaction */
-        .seal-btn {
-          position: absolute;
-          top: calc(min(320px, 90vw) * 0.22);
-          left: 50%;
-          transform: translateX(-50%);
-          background: none;
-          border: none;
+          display: grid;
+          place-items: center;
+          padding: 0;
+          border: 0;
+          background: transparent;
           cursor: pointer;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          z-index: 21;
-          transition: opacity 0.4s ease, transform 0.3s ease;
         }
 
-        .seal-btn:hover {
-          transform: translateX(-50%) scale(1.08);
-        }
-
-        .seal-btn.hide {
-          opacity: 0;
+        .photo-env.is-open {
           pointer-events: none;
         }
 
-        /* Styles for the Wax Seal Image */
-        .seal-img {
-          display: block;
-          width: 64px; 
-          height: 64px;
-          object-fit: contain;
-          filter: drop-shadow(0 4px 12px rgba(139,58,82,0.4));
-          animation: heartbeat 2.2s ease-in-out infinite;
+        .photo-frame {
+          --jx: 54.9%;
+          --jy: 47%;
+          position: relative;
+          height: min(100%, calc(100vw * 1347 / 862));
+          aspect-ratio: 862 / 1347;
+          perspective: 1400px;
+          transform-style: preserve-3d;
         }
 
-        .seal-hint {
+        .env-slice {
+          position: absolute;
+          inset: 0;
+          background: url("/assets/images/envelop-closed.png?v=5") center / 100% 100% no-repeat;
+          backface-visibility: hidden;
+          transform-style: preserve-3d;
+          transition: transform 1.7s ease 1.35s, opacity 0.7s ease 2.85s;
+        }
+
+        .env-slice.top {
+          clip-path: polygon(0 0, 100% 0, var(--jx) var(--jy));
+          transform-origin: center top;
+        }
+
+        .env-slice.bottom {
+          clip-path: polygon(0 100%, 100% 100%, var(--jx) var(--jy));
+          transform-origin: center bottom;
+        }
+
+        .env-slice.left {
+          clip-path: polygon(0 0, 0 100%, var(--jx) var(--jy));
+          transform-origin: left center;
+        }
+
+        .env-slice.right {
+          clip-path: polygon(100% 0, 100% 100%, var(--jx) var(--jy));
+          transform-origin: right center;
+        }
+
+        .photo-env.is-open .env-slice.top { transform: rotateX(-128deg); transition-delay: 1.15s, 2.65s; }
+        .photo-env.is-open .env-slice.left { transform: rotateY(128deg); transition-delay: 1.25s, 2.75s; }
+        .photo-env.is-open .env-slice.right { transform: rotateY(-128deg); transition-delay: 1.25s, 2.75s; }
+        .photo-env.is-open .env-slice.bottom { transform: rotateX(128deg); transition-delay: 1.35s, 2.85s; }
+        .photo-env.is-open .env-slice { opacity: 0; }
+
+        .env-seal {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          z-index: 4;
+          width: min(132px, 30%);
+          height: auto;
+          transform: translate(-50%, -50%);
+          pointer-events: none;
+          filter: drop-shadow(0 10px 12px rgba(20, 8, 4, 0.4));
+          transition: left 1.2s ease, opacity 1.2s ease;
+        }
+
+        .photo-env.is-open .env-seal {
+          left: 88%;
+          opacity: 0;
+        }
+
+        .photo-hint {
+          position: absolute;
+          left: 50%;
+          bottom: 6%;
+          transform: translateX(-50%);
+          z-index: 3;
+          pointer-events: none;
           font-family: 'Cinzel', serif;
-          font-size: 8px;
+          font-size: 13px;
           font-weight: 600;
-          letter-spacing: 0.16em;
+          letter-spacing: 0.22em;
           text-transform: uppercase;
-          color: #8b3a52;
-          background: rgba(255,255,255,0.85);
-          padding: 3px 8px;
-          border-radius: 10px;
-          box-shadow: 0 2px 8px rgba(139,58,82,0.08);
-          margin-top: 8px;
-          animation: pulse-hint 2s ease-in-out infinite;
+          color: #f09060;
+          background: rgba(6, 16, 32, 0.72);
+          padding: 6px 12px;
+          border: 1px solid rgba(240, 144, 96, 0.7);
+          white-space: nowrap;
         }
 
-        @keyframes heartbeat {
-          0%, 100% { transform: scale(1); }
-          12% { transform: scale(1.15); }
-          26% { transform: scale(1); }
-          38% { transform: scale(1.08); }
-          50% { transform: scale(1); }
+        /* Invitation card appears after the envelope has opened */
+        .roses-layer {
+          position: absolute;
+          inset: 0;
+          background: center / cover no-repeat;
+          opacity: 0;
+          z-index: 1;
+          pointer-events: none;
+          transition: opacity 1.8s ease;
         }
 
-        @keyframes pulse-hint {
-          0%, 100% { opacity: 0.35; }
-          50% { opacity: 0.95; }
+        .roses-layer.show {
+          opacity: 1;
+          filter: brightness(0.42);
+          animation: backdropLight 3.4s ease forwards;
         }
 
-        /* Invitation card rising and hover values */
+        @keyframes backdropLight {
+          0% { filter: brightness(0.42); }
+          78% { filter: brightness(1.35); }
+          100% { filter: brightness(1.05); }
+        }
+
+        .scene-light {
+          position: absolute;
+          inset: 0;
+          z-index: 3;
+          pointer-events: none;
+          opacity: 0;
+          background: radial-gradient(ellipse at center, rgba(255, 220, 170, 0.62) 0%, rgba(240, 144, 96, 0.28) 32%, rgba(7, 24, 46, 0) 68%);
+          mix-blend-mode: screen;
+        }
+
+        .scene-light.on {
+          animation: sceneLight 3.4s ease forwards;
+        }
+
+        @keyframes sceneLight {
+          0% { opacity: 0; }
+          78% { opacity: 1; }
+          100% { opacity: 0.42; }
+        }
+
+        .scene-wash {
+          position: absolute;
+          inset: 0;
+          background: #fff;
+          opacity: 0;
+          z-index: 40;
+          pointer-events: none;
+          transition: opacity 0.7s ease;
+        }
+
+        .scene-wash.wash {
+          opacity: 1;
+        }
+
+        .scene-wash.roses {
+          opacity: 0;
+          transition: opacity 1.15s ease;
+        }
+
         .inv-card {
           position: fixed;
           top: 50%; left: 50%;
-          width: min(310px, 86vw);
-          height: 440px;
-          z-index: 30;
+          width: min(360px, calc(100vw - 12px));
+          height: 520px;
+          z-index: 50;
           opacity: 0;
           visibility: hidden;
-          transform: translate(-50%, 60%);
-          transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease 0.2s, visibility 0s 0.2s;
+          transform: translate(-50%, -50%);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -225,47 +314,110 @@ export default function EnvelopeExperience({ onEnter }: EnvelopeExperienceProps)
         }
 
         .inv-card.up {
-          opacity: 1;
           visibility: visible;
-          transform: translate(-50%, -50%);
-          transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease, visibility 0s;
+          animation: cardAppear 0.5s ease forwards;
+        }
+
+        @keyframes cardAppear {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
         .inv-card-bg {
           position: absolute;
           inset: 0;
-          background: linear-gradient(160deg, #fffbfd 0%, #fef5f8 60%, #fdeef3 100%);
-          border: 1px solid rgba(196,96,122,0.18);
-          border-radius: 12px;
+          background-color: #07182e;
+          background-image:
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.85'/%3E%3C/svg%3E"),
+            repeating-linear-gradient(0deg, rgba(255,248,236,0.14) 0 1px, transparent 1px 3px),
+            repeating-linear-gradient(90deg, rgba(8,22,38,0.16) 0 1px, transparent 1px 5px);
+          background-size: 180px 180px, auto, auto;
+          background-blend-mode: soft-light, soft-light, multiply;
+          border: 1px solid rgba(232,150,86,0.7);
           box-shadow:
-            0 24px 60px rgba(139,58,82,0.22),
-            inset 0 0 0 5px rgba(248,196,216,0.1),
-            inset 0 0 0 6px rgba(196,96,122,0.07);
+            0 30px 70px rgba(2,8,20,0.62),
+            0 10px 24px rgba(0,0,0,0.4),
+            0 0 36px rgba(212,165,116,0.22),
+            inset 0 1px 0 rgba(255,244,230,0.22),
+            inset 0 0 0 6px rgba(18,52,80,0.4),
+            inset 0 0 0 7px rgba(215,165,122,0.38);
           z-index: 0;
+          overflow: hidden;
+        }
+
+        .inv-card-bg::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+          opacity: 0.28;
+          mix-blend-mode: multiply;
+          pointer-events: none;
+        }
+
+        .inv-card-bg::after {
+          content: '';
+          position: absolute;
+          inset: 10px;
+          border: 1px solid rgba(232,150,86,0.45);
+          pointer-events: none;
         }
 
         /* Flower Clusters on invitation card */
         .inv-card-flowers-top {
           position: absolute;
-          top: -30px; left: -24px;
-          width: 104px; height: 104px;
+          top: -100px; left: -36px;
+          width: 156px;
+          height: auto;
+          aspect-ratio: 717 / 1074;
+          max-width: none;
+          max-height: none;
+          object-fit: contain;
           pointer-events: none;
           z-index: 40;
+          opacity: 0;
+          transform: translateY(-26px) scale(0.9);
+          transform-origin: 28% 0%;
         }
 
-        .inv-card-flowers-bottom {
+        .inv-card.up .inv-card-flowers-top {
+          animation: flowerEase 1.25s ease 0.2s both;
+        }
+
+        .inv-card-flowers-top.mirror {
+          left: auto;
+          right: -36px;
+          transform: translateY(-26px) scale(0.9) scaleX(-1);
+          transform-origin: top center;
+        }
+
+        .inv-card.up .inv-card-flowers-top.mirror {
+          animation-name: flowerEaseMirror;
+          animation-delay: 0.38s;
+        }
+
+        @keyframes flowerEase {
+          from { opacity: 0; transform: translateY(-26px) scale(0.9); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes flowerEaseMirror {
+          from { opacity: 0; transform: translateY(-26px) scale(0.9) scaleX(-1); }
+          to { opacity: 1; transform: scaleX(-1); }
+        }
+
+        .card-glitter {
           position: absolute;
-          bottom: -32px; right: -24px;
-          width: 104px; height: 104px;
+          inset: 0;
+          overflow: hidden;
           pointer-events: none;
-          z-index: 40;
-          transform: scale(-1);
+          z-index: 4;
         }
 
         .inv-inner {
           position: relative;
           z-index: 10;
-          padding: 24px;
+          padding: 20px 12px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -275,26 +427,75 @@ export default function EnvelopeExperience({ onEnter }: EnvelopeExperienceProps)
           height: 100%;
         }
 
-        /* Twinkle & float elements */
-        .twinkle-overlay::after {
-          content: ''; position: absolute; inset: 0; pointer-events: none;
-          background-image:
-            radial-gradient(circle 3px at 30% 25%, rgba(255,255,255,0.95) 0%, transparent 100%),
-            radial-gradient(circle 2px at 55% 18%, rgba(255,255,255,0.85) 0%, transparent 100%),
-            radial-gradient(circle 4px at 72% 30%, rgba(255,255,255,0.72) 0%, transparent 100%),
-            radial-gradient(circle 2px at 18% 40%, rgba(255,255,255,0.78) 0%, transparent 100%),
-            radial-gradient(circle 3px at 85% 22%, rgba(255,255,255,0.92) 0%, transparent 100%),
-            radial-gradient(circle 6px at 50% 48%, rgba(255,225,170,0.85) 0%, transparent 100%),
-            radial-gradient(circle 3px at 25% 60%, rgba(255,205,175,0.68) 0%, transparent 100%),
-            radial-gradient(circle 2px at 78% 55%, rgba(255,205,175,0.68) 0%, transparent 100%),
-            radial-gradient(circle 4px at 12% 75%, rgba(255,255,255,0.72) 0%, transparent 100%),
-            radial-gradient(circle 3px at 90% 70%, rgba(255,255,255,0.72) 0%, transparent 100%);
-          animation: overlayTwinkle 4s ease-in-out infinite alternate;
+        .scene-glitter {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          z-index: 2;
+          overflow: hidden;
         }
 
-        @keyframes overlayTwinkle {
-          0% { opacity: 0.45; }
-          100% { opacity: 1; }
+        .scene-glint {
+          position: absolute;
+          opacity: 0;
+          background: #fffdf6;
+          clip-path: polygon(50% 0%, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0% 50%, 42% 42%);
+          filter: drop-shadow(0 0 5px rgba(255, 236, 200, 0.95));
+          animation-name: sceneGlint;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
+        }
+
+        .scene-glint.gold {
+          background: #f0c48a;
+          filter: drop-shadow(0 0 6px rgba(226, 158, 86, 0.95));
+        }
+
+        @keyframes sceneGlint {
+          0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+          6% { opacity: 1; transform: scale(1) rotate(12deg); }
+          22% { opacity: 0; transform: scale(0.35) rotate(24deg); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .scene-glint { animation: none; opacity: 0; }
+          .inv-card.up {
+            animation: none;
+            opacity: 1;
+            transform: translate(-50%, -50%);
+          }
+          .inv-card-flowers-top,
+          .inv-card.up .inv-card-flowers-top {
+            animation: none;
+            opacity: 1;
+            transform: none;
+          }
+          .inv-card-flowers-top.mirror,
+          .inv-card.up .inv-card-flowers-top.mirror {
+            animation: none;
+            opacity: 1;
+            transform: scaleX(-1);
+          }
+          .photo-env.is-open .env-slice {
+            transform: none;
+            opacity: 0;
+            transition: opacity 0.3s linear;
+          }
+          .photo-env.is-open .env-seal {
+            left: 50%;
+            opacity: 0;
+            transition: opacity 0.2s linear;
+          }
+          .roses-layer.show {
+            animation: none;
+            filter: none;
+            opacity: 1;
+          }
+          .scene-light,
+          .scene-light.on {
+            animation: none;
+            opacity: 0;
+          }
         }
 
         /* Overlay floating petals fall */
@@ -302,7 +503,7 @@ export default function EnvelopeExperience({ onEnter }: EnvelopeExperienceProps)
           position: absolute;
           top: -30px;
           opacity: 0;
-          background: radial-gradient(ellipse at 40% 30%, #fdeef3, #f2c4d0bb);
+          background: radial-gradient(ellipse at 40% 30%, #f0c48a, #d4894a 42%, #e07a3d);
           border-radius: 60% 40% 70% 30% / 50% 60% 40% 70%;
           animation: petalFall linear infinite;
           pointer-events: none;
@@ -329,14 +530,87 @@ export default function EnvelopeExperience({ onEnter }: EnvelopeExperienceProps)
       {/* Primary Overlay screen loading your scenic painting as a full backdrop */}
       <div 
         id="envelope-wrapper"
-        className={`fixed inset-0 flex items-center justify-center p-6 z-[9999] overflow-hidden select-none transition-opacity duration-1000 ease-in-out twinkle-overlay ${isFading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-        style={{
-          backgroundImage: `url(${BACKROUND_SCENE_IMAGE})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
+        className={`fixed inset-0 z-[9999] overflow-hidden select-none transition-opacity duration-1000 ease-in-out ${isFading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        style={{ backgroundColor: "#06101c" }}
       >
-        
+        <div className="scene-glitter" aria-hidden="true">
+          {glints.map((glint) => (
+            <span
+              key={glint.id}
+              className={`scene-glint ${glint.gold ? "gold" : ""}`}
+              style={{
+                left: `${glint.left}%`,
+                top: `${glint.top}%`,
+                width: `${glint.size}px`,
+                height: `${glint.size}px`,
+                animationDuration: `${glint.duration}s`,
+                animationDelay: `${glint.delay}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        <div
+          className={`roses-layer ${scenePhase === "roses" ? "show" : ""}`}
+          style={{ backgroundImage: `url(${ROSES_SCENE_IMAGE})` }}
+        />
+        <div className={`scene-light ${scenePhase === "roses" ? "on" : ""}`} aria-hidden="true" />
+        <div className={`scene-wash ${scenePhase === "sealed" ? "" : scenePhase}`} />
+
+        <div className={`inv-card ${isCardUp ? "up" : ""}`}>
+          <div className="inv-card-bg" />
+          <div className="card-glitter" aria-hidden="true">
+            {cardGlints.map((glint) => (
+              <span
+                key={glint.id}
+                className={`scene-glint ${glint.gold ? "gold" : ""}`}
+                style={{
+                  left: `${glint.left}%`,
+                  top: `${glint.top}%`,
+                  width: `${glint.size}px`,
+                  height: `${glint.size}px`,
+                  animationDuration: `${glint.duration}s`,
+                  animationDelay: `${glint.delay}s`,
+                }}
+              />
+            ))}
+          </div>
+          <img src="/assets/images/top_flower.png?v=2" alt="" className="inv-card-flowers-top" />
+          <img src="/assets/images/top_flower.png?v=2" alt="" className="inv-card-flowers-top mirror" />
+          <div className="inv-inner py-6 px-3">
+            <span className="font-serif text-[18px] text-[#f09060]">❧</span>
+            <div>
+              <span className="font-cinzel text-sm tracking-[0.16em] text-[#f09060] uppercase block mb-1">
+                You are invited to
+              </span>
+              <span className="h-[1px] w-12 bg-[#f09060]/70 mx-auto block mb-3" />
+              <img
+                src="/assets/images/18th-text.png"
+                alt="Jaylyn Eirielle 18th Birthday"
+                className="w-full max-w-[240px] h-auto mx-auto object-contain"
+              />
+            </div>
+            <div className="font-garamond text-white text-base leading-snug">
+              <p>Saturday, November 7, 2026</p>
+              <p className="text-[#f09060]">5:00 PM</p>
+              <p className="mt-1 text-base text-[#f0d7b4]">Angelitos Event Center<br />Batangas City</p>
+            </div>
+            <div className="w-full px-1">
+              <NameLookup tone="card" onChange={setPickedGuest} />
+            </div>
+            <button
+              id="enterBtn"
+              type="button"
+              disabled={!pickedGuest}
+              onClick={handleEnterCelebration}
+              className="invite-btn mt-2"
+            >
+              Enter the Celebration
+            </button>
+            <span className="font-serif text-[18px] text-[#f09060] transform rotate-180 block">❧</span>
+          </div>
+        </div>
+
         {/* Falling petals inside overlay view */}
         {bgPetals.map((petal) => (
           <div 
@@ -349,87 +623,26 @@ export default function EnvelopeExperience({ onEnter }: EnvelopeExperienceProps)
               animationDuration: `${petal.duration}s`,
               animationDelay: `${petal.delay}s`,
               transform: `rotate(${Math.random() * 360}deg)`,
+              background: PETAL_FILLS[petal.id % PETAL_FILLS.length],
             }}
           />
         ))}
 
-        <div className="env-scene">
-          
-          {/* THE INVITE CARD (Rises dramatically out of the envelope) */}
-          <div className={`inv-card ${isCardUp ? 'up' : ''}`}>
-            <div className="inv-card-bg" />
-            <img src="/assets/images/top_flower.png" alt="Floral Decoration" className="inv-card-flowers-top" />
-            <img src="/assets/images/bot_flower.png" alt="Floral Decoration" className="inv-card-flowers-bottom" />
-            <div className="inv-inner py-8 px-6">
-              <span className="text-gold-accent font-serif text-[18px]">❧</span>
-              
-              <div>
-                <span className="font-cinzel text-[10px] tracking-[0.24em] text-primary-rose/80 uppercase block mb-1">
-                  You are invited to
-                </span>
-                <span className="h-[1px] w-12 bg-gold-accent/40 mx-auto block mb-3" />
-                <h1 className="font-dancing text-4xl md:text-5xl text-primary-rose leading-tight font-medium">
-                  Trisha Jia's <br/>
-                  <span className="font-playfair text-xl md:text-2xl text-soft-ink italic block mt-1">A Decade & Eight</span>
-                </h1>
-              </div>
-
-              <span className="text-gold-accent text-xs tracking-[0.3em] font-medium my-1">✦ &nbsp; ✦ &nbsp; ✦</span>
-              
-              <p className="font-garamond text-base md:text-lg text-soft-ink-variant leading-relaxed italic max-w-xs px-2">
-                Join us for a magical evening as we celebrate a remarkable milestone in her eighteenth birthday and the beginning of a beautiful new chapter.
-              </p>
-
-              <button 
-                id="enterBtn"
-                onClick={handleEnterCelebration}
-                className="font-cinzel text-[10px] tracking-[0.2em] uppercase py-3 px-6 border border-primary-rose-light/40 rounded-full bg-linear-to-b from-[#fff5f8] to-[#fad8e5] text-primary-rose hover:text-white hover:bg-linear-to-b hover:from-primary-rose-light hover:to-primary-rose cursor-pointer transition-all duration-300 shadow-xs hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0 mt-4 outline-none"
-              >
-                ✦ Enter the Celebration ✦
-              </button>
-
-              <span className="text-gold-accent font-serif text-[18px] transform rotate-180 block">❧</span>
-            </div>
-          </div>
-
-          {/* Elegant header above the envelope */}
-          {!isOpen && (
-            <div className="text-center mb-6 max-w-[280px] select-none animate-pulse relative z-20">
-              <span className="font-cinzel text-xs tracking-[0.32em] text-[#8b3a52] font-bold uppercase block">
-                To our Dearest Guest
-              </span>
-              <div className="h-[1px] w-12 bg-gold-accent/50 mx-auto mt-2" />
-            </div>
-          )}
-
-          {/* THE ENVELOPE (Includes the interactive seal & flaps) */}
-          <div className="envelope-container flex flex-col justify-end relative">
-            
-            {/* The Top Flap (rotates back 180 degrees) */}
-            <div className={`env-flap-wrap ${isOpen ? 'open' : ''}`}>
-              <div className="env-flap" />
-            </div>
- 
-            {/* The Front Pocket / Liner overlay */}
-            <div className="env-pocket border-t border-primary-rose-light/10 flex items-center justify-center">
-              <div className="w-12 h-[1px] bg-gold-accent/25" />
-              <span className="mx-3 text-[10px] text-gold-accent/40">✦</span>
-              <div className="w-12 h-[1px] bg-gold-accent/25" />
-            </div>
- 
-            {/* WAX SEAL BUTTON */}
-            <button 
-              onClick={handleOpenFlap}
-              className={`seal-btn ${isOpen ? 'hide' : ''}`}
-            >
-              {/* Replaced the heart emoji with the custom wax-seal.png image */}
-              <img src={WAX_SEAL_IMAGE} alt="Wax Seal" className="seal-img" />
-              <span className="seal-hint">tap to open</span>
-            </button>
- 
-          </div>
-
-        </div>
+        <button
+          type="button"
+          className={`photo-env ${isOpen ? "is-open" : ""}`}
+          onClick={handleOpenFlap}
+          aria-label="Open the invitation"
+        >
+          <span className="photo-frame">
+            <span className="env-slice top" />
+            <span className="env-slice right" />
+            <span className="env-slice bottom" />
+            <span className="env-slice left" />
+            <img src={SEAL_IMAGE} alt="" className="env-seal" />
+            {!isOpen && <span className="photo-hint">tap to open</span>}
+          </span>
+        </button>
       </div>
     </>
   );

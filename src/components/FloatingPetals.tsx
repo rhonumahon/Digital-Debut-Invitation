@@ -5,6 +5,12 @@
 
 import { useState, useEffect } from "react";
 
+const PETAL_FILLS = [
+  "radial-gradient(ellipse at 35% 30%, #f0c48a, #d4894a 42%, #b87333)",
+  "radial-gradient(ellipse at 35% 30%, #f2b56a, #e07a3d 40%, #c45a22)",
+  "radial-gradient(ellipse at 35% 30%, #e8c49a, #c9956b 36%, #d4783a)",
+];
+
 export default function FloatingPetals() {
   const [petals, setPetals] = useState<Array<{ id: number; left: number; delay: number; duration: number; size: number }>>([]);
 
@@ -27,7 +33,7 @@ export default function FloatingPetals() {
         {petals.map((petal) => (
           <div
             key={petal.id}
-            className="absolute bg-primary-rose-light/45 rounded-tr-[120%] rounded-bl-[120%] shadow-sm"
+            className="absolute rounded-tr-[120%] rounded-bl-[120%] shadow-sm"
             style={{
               left: `${petal.left}%`,
               width: `${petal.size}px`,
@@ -36,6 +42,7 @@ export default function FloatingPetals() {
               animation: `fall ${petal.duration}s linear infinite`,
               animationDelay: `${petal.delay}s`,
               transform: `rotate(${Math.random() * 360}deg)`,
+              background: PETAL_FILLS[petal.id % PETAL_FILLS.length],
             }}
           />
         ))}

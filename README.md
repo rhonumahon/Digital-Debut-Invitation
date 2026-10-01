@@ -1,13 +1,13 @@
 # Digital-Debut-Invitation
 
-Celestial Court: Trisha Jia's 18th Debutante Ball
+Celestial Court: Jaylyn Eirielle's 18th Debutante Ball
 
 An Immersive, Bridgerton-Inspired Digital Invitation & RSVP Portal
 
 Live Site React Tailwind CSS Framer Motion
 
 A lightweight, fully responsive, interactive single-page web invitation created
-for Trisha Jia's 18th birthday debutante ball. Inspired by the classical oil
+for Jaylyn Eirielle's 18th birthday debutante ball. Inspired by the classical oil
 paintings and regency elegance of the Bridgerton aesthetic, this project blends
 traditional formal stationery design with modern interactive front-end web
 engineering.

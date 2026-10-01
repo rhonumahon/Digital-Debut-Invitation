@@ -25,10 +25,10 @@ export default function Header({ onRSVPClick }: HeaderProps) {
         {/* Elegant Serif Logo */}
         <div className="flex flex-col">
           <a href="#hero" className="font-gallery-script text-2xl md:text-2xl text-primary-rose italic font-medium tracking-wide hover:opacity-90 transition-opacity">
-            Trisha Jia
+            Jaylyn Eirielle
           </a>
-          <span className="font-garamond text-[10px] sm:text-xs text-gold-accent tracking-[0.18em] uppercase font-bold">
-            A Spectacular Night of Grace and New Beginnings
+          <span className="font-garamond text-[13px] text-gold-accent tracking-[0.14em] uppercase font-bold">
+            November 7, 2026 · Batangas City
           </span>
         </div>
 
@@ -50,10 +50,9 @@ export default function Header({ onRSVPClick }: HeaderProps) {
           <button
             onClick={onRSVPClick}
             id="rsvp-nav-btn"
-            className="relative overflow-hidden bg-primary-rose text-white font-garamond text-sm uppercase tracking-[0.15em] font-semibold px-7 py-3 rounded-full hover:bg-primary-rose-light hover:text-primary-rose shadow-md hover:shadow-lg hover:shadow-primary-rose/20 active:scale-95 transition-all duration-300 group cursor-pointer"
+            className="invite-btn"
           >
-            <span className="relative z-10">Confirm RSVP</span>
-            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-0 bg-gold-light/15 ease-out transition-transform duration-500" />
+            Confirm
           </button>
         </div>
 
@@ -70,7 +69,7 @@ export default function Header({ onRSVPClick }: HeaderProps) {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden absolute top-20 left-0 w-full bg-cream-bg border-b border-outline-variant/40 shadow-xl flex flex-col p-6 gap-4 z-40 animate-fade-in">
+        <div className="md:hidden absolute top-20 inset-x-0 w-full bg-cream-bg border-b border-outline-variant/40 shadow-xl flex flex-col p-6 gap-4 z-40 animate-fade-in">
           {navLinks.map((link) => {
             const IconComponent = link.icon;
             return (
@@ -92,9 +91,9 @@ export default function Header({ onRSVPClick }: HeaderProps) {
               onRSVPClick();
             }}
             id="rsvp-mobile-btn"
-            className="w-full bg-primary-rose text-white font-garamond text-base uppercase tracking-[0.1em] font-semibold py-3 rounded-full shadow-md hover:bg-primary-rose-light active:scale-95 transition-all text-center cursor-pointer"
+            className="invite-btn w-full"
           >
-            Confirm RSVP
+            Confirm
           </button>
         </div>
       )}

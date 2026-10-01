@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=Cinzel:wght@400..700&family=Dancing+Script:wght@400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=Cinzel:wght@400..700&family=Dancing+Script:wght@400..700&family=Great+Vibes&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -6,20 +6,112 @@
   --font-garamond: 'Cormorant Garamond', serif;
   --font-cinzel: 'Cinzel', serif;
   --font-dancing: 'Dancing Script', cursive;
+  --font-fairytale: 'Great Vibes', cursive;
   
-  --color-primary-rose: #8b3a52;
-  --color-primary-rose-light: #f2c4d0;
-  --color-primary-rose-bg: #fdeef3;
-  --color-gold-accent: #c9a878;
-  --color-gold-light: #e8d4a8;
-  --color-cream-bg: #fffbfc;
-  --color-cream-low: #fff5f8;
-  --color-cream-high: #f9e0e8;
-  --color-cream-highest: #f4c8d8;
-  --color-cream-container: #fff8fa;
-  --color-soft-ink: #3d1a26;
-  --color-soft-ink-variant: #7a3f55;
-  --color-outline-variant: #b07888;
+  --color-primary-rose: #f09060;
+  --color-primary-rose-light: #f09060;
+  --color-primary-rose-bg: #102844;
+  --color-gold-accent: #f09060;
+  --color-gold-light: #f09060;
+  --color-cream-bg: #07182e;
+  --color-cream-low: #0c2340;
+  --color-cream-high: #163056;
+  --color-cream-highest: #1c3d68;
+  --color-cream-container: #0e2744;
+  --color-soft-ink: #f6f0e6;
+  --color-soft-ink-variant: #f0d2b0;
+  --color-outline-variant: #f09060;
+}
+
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+  background: #06101c;
+}
+
+.invite-btn {
+  font-family: "Cinzel", serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 0.75rem 1.05rem;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  color: #fff8f2;
+  text-shadow: 0 1px 1px rgba(90, 36, 12, 0.45);
+  cursor: pointer;
+  background:
+    linear-gradient(100deg, #e89558 0%, #c56a38 42%, #b85e30 78%, #d07842 100%) padding-box,
+    linear-gradient(180deg, #fff8ee 0%, #ffd8b0 28%, #f0a060 62%, #ffe6cc 100%) border-box;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 236, 214, 0.5),
+    0 0 1px #fff2e4,
+    0 0 14px rgba(240, 140, 70, 0.75),
+    0 0 22px rgba(210, 100, 40, 0.35),
+    0 8px 16px rgba(70, 28, 10, 0.3);
+  outline: none;
+  transition: transform 0.3s, filter 0.3s;
+}
+
+.invite-btn * {
+  white-space: nowrap;
+}
+
+.invite-btn:hover:not(:disabled) {
+  color: #2a180c;
+  filter: brightness(1.06);
+  transform: translateY(-2px);
+}
+
+.invite-btn:active:not(:disabled) {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}
+
+.invite-btn::before,
+.invite-btn::after {
+  display: inline-block;
+  animation: star-blink 1.4s ease-in-out infinite;
+}
+
+.invite-btn::before {
+  content: "✦";
+  margin-right: 0.4em;
+}
+
+.invite-btn::after {
+  content: "✦";
+  margin-left: 0.4em;
+  animation-delay: 0.7s;
+}
+
+.invite-btn:disabled::before,
+.invite-btn:disabled::after {
+  animation: none;
+}
+
+@keyframes star-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+
+.invite-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.invite-btn.on {
+  color: #fff8f2;
+  background:
+    linear-gradient(100deg, #f0a060 0%, #d07842 46%, #c46834 100%) padding-box,
+    linear-gradient(180deg, #fffaf4 0%, #ffe0c0 32%, #f6b080 100%) border-box;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 244, 228, 0.7),
+    0 0 1px #fff6ec,
+    0 0 18px rgba(245, 155, 85, 0.85),
+    0 8px 16px rgba(70, 28, 10, 0.3);
 }
 
 @keyframes flicker {
@@ -62,6 +154,22 @@
   75%      { transform: rotate(4deg) translateY(-6px); }
 }
 
+.bronze-card {
+  background: linear-gradient(180deg, #fff8ee 0%, #f4e4cf 100%);
+  border: 1px solid #c4894a;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 248, 236, 0.95),
+    inset 0 0 0 3px rgba(196, 120, 58, 0.35),
+    0 8px 18px rgba(48, 18, 6, 0.28);
+  color: #5c3418;
+}
+
+.bronze-inset {
+  background: linear-gradient(180deg, #fff4e6 0%, #f0dcc4 100%);
+  border: 1px solid rgba(196, 137, 74, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 248, 236, 0.7);
+}
+
 .card-flowers {
   position: absolute;
   bottom: -20px;
@@ -77,13 +185,13 @@
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #fbf9f5;
+  background: #07182e;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d5c2c1;
+  background: #f09060;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #815152;
+  background: #f09060;
 }
 

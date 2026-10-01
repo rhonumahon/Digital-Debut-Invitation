@@ -27,12 +27,3 @@ export interface SymbolItem {
   iconName: string;
 }
 
-export interface RSVPDetails {
-  fullName: string;
-  email: string;
-  attending: boolean;
-  companionName?: string;
-  dietaryRestrictions?: string;
-  attireColorPreference?: string;
-  wellWishes?: string;
-}

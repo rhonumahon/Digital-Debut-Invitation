@@ -4,30 +4,34 @@
  */
 
 import React from "react";
-
-// Path to your scenic background image
-const TIMELINE_BACKGROUND_IMAGE = "/assets/images/flwr.png";
+import Reveal from "./Reveal";
 
 export default function ProgramCard() {
-  const programSteps = [
-    "Guest Registration",
-    "Welcoming Remarks",
-    "Grand Entrance",
-    "Cotillion de Honor",
-    "18 Treasures",
-    "18 Bills",
-    "Dinner",
-    "18 Roses",
-    "18 Candles",
-    "18 Shots",
-    "Blowing of Candles",
+  const programSteps: { title: string; note?: string }[] = [
+    { title: "Welcome & Introduction" },
+    { title: "Grand Entrance — Jaylyn", note: "Prayer, then a welcome speech by Daddy Ipe" },
+    { title: "18 Roses" },
+    { title: "18 Fashion Pieces" },
+    { title: "Game 1", note: "A moment for guests to enjoy" },
+    { title: "18 Glam" },
+    { title: "18 Treasures" },
+    { title: "Game 2", note: "Jaylyn changes from her ball gown into her dance outfit" },
+    { title: "Jaylyn’s Production Number", note: "First performance" },
+    { title: "18 Bills", note: "A short pause after the performance" },
+    { title: "Game 3", note: "Costume change for the kata" },
+    { title: "Jaylyn’s Kata Performance", note: "Second performance" },
+    { title: "Dinner", note: "Around 7 PM. Jaylyn may change while guests dine" },
+    { title: "Jaylyn’s Solo Song Number", note: "Third performance" },
+    { title: "Intermission", note: "Tito Miko & Sandy" },
+    { title: "Special Messages & Wishes", note: "Sei Cora, Moi & Erika, Aldrich, Mama, and Mommy" },
+    { title: "Jaylyn’s Birthday Speech" },
+    { title: "Cake Presentation" },
+    { title: "Candle Blowing" },
+    { title: "Final Photos & Closing" },
   ];
 
   return (
-    <div 
-      className="group relative overflow-hidden bg-cover bg-center border border-outline-variant/30 p-4 sm:p-8 md:p-12 rounded-[1.5rem] w-full flex flex-col items-center shadow-lg min-h-[900px] md:min-h-[1050px]"
-      style={{ backgroundImage: `url(${TIMELINE_BACKGROUND_IMAGE})` }}
-    >
+    <div className="group relative overflow-hidden p-4 sm:p-8 md:p-12 w-full flex flex-col items-center">
       {/* All transparent/filter overlays have been completely removed from this background */}
 
       {/* Import elegant scripts dynamically */}
@@ -41,21 +45,31 @@ export default function ProgramCard() {
         .gold-line-glow {
           box-shadow: 0 0 8px rgba(196, 152, 88, 0.4);
         }
-      `}</style>
 
-      {/* Premium Elegant Inset Border Design */}
-      <div className="absolute inset-3 border border-gold-accent/20 rounded-2xl pointer-events-none z-10" />
-      <div className="absolute inset-4 border border-gold-accent/5 rounded-2xl pointer-events-none z-10" />
+        .timeline-ink {
+          text-shadow:
+            0 1px 1px rgba(7, 24, 46, 1),
+            0 2px 8px rgba(7, 24, 46, 0.95),
+            0 0 16px rgba(7, 24, 46, 0.85);
+        }
+
+        .timeline-ink-title {
+          text-shadow:
+            0 2px 2px rgba(7, 24, 46, 1),
+            0 4px 18px rgba(7, 24, 46, 0.95),
+            0 0 28px rgba(7, 24, 46, 0.8);
+        }
+      `}</style>
 
       <div className="relative z-10 w-full flex flex-col items-center py-2">
         
         {/* Top Header Group */}
-        <div className="text-center mb-8 select-none">
-          <span className="text-gold-accent text-xs tracking-widest font-serif block mb-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">✦ &nbsp; ⚜ &nbsp; ✦</span>
-          <h2 className="font-timeline-script text-5xl md:text-6xl text-primary-rose leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-            Debut Timeline</h2> <p>Emcee: Richard Fabella</p>
+        <Reveal className="text-center mb-8 select-none" y={16}>
+          <span className="text-gold-accent text-xs tracking-widest font-serif block mb-1">✦ &nbsp; ⚜ &nbsp; ✦</span>
+          <h2 className="font-timeline-script timeline-ink-title text-6xl md:text-7xl text-white leading-tight">
+            Debut Timeline</h2>
           <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-gold-accent/40 to-transparent mx-auto mt-2" />
-        </div>
+        </Reveal>
 
         {/* Timeline Content Area */}
         <div className="relative w-full max-w-2xl flex flex-col items-center my-2 pb-10">
@@ -64,39 +78,46 @@ export default function ProgramCard() {
           <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-gradient-to-b from-primary-rose-light/40 via-primary-rose/30 to-primary-rose-light/40 -translate-x-1/2 z-0" />
 
           {/* List of Timeline Steps */}
-          <div className="w-full space-y-8 md:space-y-12">
+          <div className="w-full space-y-7 md:space-y-9">
             {programSteps.map((step, idx) => {
               const isEven = idx % 2 === 0;
+              const label = (
+                <>
+                  <span className="font-playfair timeline-ink text-base sm:text-lg text-white italic font-bold transition-colors select-none leading-tight block">
+                    {step.title}
+                  </span>
+                  {step.note && (
+                    <span className="font-garamond timeline-ink text-base text-white not-italic font-medium leading-snug block mt-1">
+                      {step.note}
+                    </span>
+                  )}
+                </>
+              );
 
               return (
-                <div 
+                <Reveal
                   key={idx}
+                  delay={idx * 0.06}
+                  y={14}
+                  x={isEven ? -22 : 22}
                   className="relative w-full grid grid-cols-2 gap-x-4 sm:gap-x-8 md:gap-x-12 items-center justify-center z-10"
                 >
                   {/* Central Node Pin */}
-                  <div className="absolute left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-[#fbf9f5] border-2 border-primary-rose shadow-sm flex items-center justify-center z-20">
+                  <div className="absolute left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-[#07182e] border-2 border-primary-rose shadow-sm flex items-center justify-center z-20">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary-rose" />
                   </div>
 
                   {/* Left Column (Even indexes render here, right-aligned) */}
                   <div className="text-right pr-4 sm:pr-8 md:pr-10 col-start-1">
-                    {isEven && (
-                      <span className="font-playfair text-xs sm:text-base text-[18px] text-primary-rose italic font-bold transition-colors select-none leading-tight block drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-                        {step}
-                      </span>
-                    )}
+                    {isEven && label}
                   </div>
 
                   {/* Right Column (Odd indexes render here, left-aligned) */}
                   <div className="text-left pl-4 sm:pr-8 md:pl-10 col-start-2">
-                    {!isEven && (
-                      <span className="font-playfair text-xs sm:text-base text-[18px] text-primary-rose italic font-bold transition-colors select-none leading-tight block drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-                        {step}
-                      </span>
-                    )}
+                    {!isEven && label}
                   </div>
 
-                </div>
+                </Reveal>
               );
             })}
           </div>
