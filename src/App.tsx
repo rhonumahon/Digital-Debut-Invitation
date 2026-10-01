@@ -13,7 +13,7 @@ import ProgramCard from "./components/ProgramCard";
 import SymbolsSection from "./components/SymbolsSection";
 import RSVPSection from "./components/RSVPSection";
 import AttendanceForm from "./components/AttendanceForm";
-import { readGuestSession, rememberGuest } from "./attendance/session";
+import { clearGuestSession, readGuestSession, rememberGuest } from "./attendance/session";
 import type { FamilyMember } from "./attendance/types";
 import FloatingPetals from "./components/FloatingPetals"; // Imported the new FloatingPetals component
 import EnvelopeExperience from "./components/EnvelopeExperience";
@@ -191,6 +191,22 @@ export default function App() {
     setShowEnvelope(false);
   };
 
+  const returnToEnvelope = () => {
+    clearGuestSession();
+    preparingGuest.current = null;
+    setGuestId(null);
+    setPromptGuestId(null);
+    setPromptMembers(null);
+    setPromptOpen(false);
+    setPromptClosing(false);
+    setProtocolOpen(false);
+    setShowEnvelope(true);
+    if (window.location.hash) {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    window.scrollTo(0, 0);
+  };
+
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
@@ -232,6 +248,22 @@ export default function App() {
       {/* Interactive opening sequence envelope */}
       {showEnvelope && (
         <EnvelopeExperience onPrepare={prepareGuest} onEnter={handleEnterCelebration} onOpen={startMusic} />
+      )}
+
+      {!showEnvelope && (
+        <nav
+          aria-label="Page"
+          className="fixed inset-x-0 top-0 z-40 flex justify-center px-3 pt-[max(0.45rem,env(safe-area-inset-top))]"
+        >
+          <div className="flex max-w-full flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <a href="#symbols" className="page-jump">Traditions</a>
+            <a href="#venue" className="page-jump">Venue</a>
+            <a href="#rsvp" className="page-jump">RSVP</a>
+            <button type="button" onClick={returnToEnvelope} className="page-jump">
+              Login
+            </button>
+          </div>
+        </nav>
       )}
 
       {promptOpen && guestId && promptGuestId === guestId && promptMembers && (
@@ -400,19 +432,10 @@ export default function App() {
       </section>
 
       <DebutantMoment
-        image="/assets/images/debutant-nursing.jpg"
-        alt="Jaylyn Eirielle in her nursing uniform"
-        headingKicker="A short introduction"
-        heading="About Jaylyn"
-        kicker="Her studies"
-        motto="Nursing, at the University of Batangas."
-        reason="Jaylyn is taking a nursing course at the University of Batangas. This evening honors her eighteenth year, and the care she is learning to give."
-        flip
-      />
-
-      <DebutantMoment
         image="/assets/images/debutant-evening.jpg"
         alt="Jaylyn Eirielle"
+        headingKicker="A short introduction"
+        heading="About Jaylyn"
         kicker="A reason to stay"
         motto="Your presence is the celebration."
         reason="Come to witness her entrance, her performances, and the words she has saved for this night. That is the honor she is asking of you."
@@ -434,6 +457,15 @@ export default function App() {
             fit: "object-[center_32%]",
           },
         ]}
+      />
+
+      <DebutantMoment
+        image="/assets/images/debutant-nursing.jpg"
+        alt="Jaylyn Eirielle in her nursing uniform"
+        kicker="Her studies"
+        motto="Nursing, at the University of Batangas."
+        reason="Jaylyn is taking a nursing course at the University of Batangas. This evening honors her eighteenth year, and the care she is learning to give."
+        flip
       />
 
       <DebutantMoment

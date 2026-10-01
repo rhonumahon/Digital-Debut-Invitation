@@ -17,3 +17,12 @@ export function readGuestSession(): string | null {
 export function rememberGuest(guestId: string) {
   localStorage.setItem(GUEST_SESSION_KEY, guestId);
 }
+
+export function clearGuestSession() {
+  try {
+    localStorage.removeItem(GUEST_SESSION_KEY);
+    sessionStorage.removeItem(GUEST_SESSION_KEY);
+  } catch {
+    // Storage can be blocked in private browsing.
+  }
+}

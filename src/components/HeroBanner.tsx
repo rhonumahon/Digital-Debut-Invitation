@@ -26,7 +26,7 @@ const NAME_GLINTS = [
 
 const GOWN_COPPER = "/assets/images/debut-gown-white.png?v=15";
 const GOWN_BLUE = "/assets/images/debut-gown-blue.png?v=15";
-export const GOWN_CHANGE_AT = new Date("2026-10-02T02:28:00").getTime();
+export const GOWN_CHANGE_AT = new Date("2026-10-02T03:00:00").getTime();
 const WIPE_SECONDS = 16;
 const GOWN_WIPE_MS = WIPE_SECONDS * 1000;
 const TIMEOUT_MAX = 2_147_483_647;
@@ -198,8 +198,10 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
         <div className="gown-magic absolute inset-0 z-[15] overflow-hidden pointer-events-none" aria-hidden="true">
           <div className="gown-edge">
             <div className="gown-feather" aria-hidden="true">
-              <div className="gown-feather-shift">
-                <img src={GOWN_BLUE} alt="" className="hero-gown" />
+              <div className="gown-feather-blur">
+                <div className="gown-feather-shift">
+                  <img src={GOWN_BLUE} alt="" className="hero-gown" />
+                </div>
               </div>
             </div>
             <div className="gown-haze" />
@@ -224,7 +226,7 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
 
       {titlesVisible && (
         <>
-          <div className="hero-title-in absolute inset-x-0 top-[6%] z-20 flex justify-center pointer-events-none px-6">
+          <div className="hero-title-in absolute inset-x-0 top-[max(6%,calc(env(safe-area-inset-top)+2.75rem))] z-20 flex justify-center pointer-events-none px-6">
             <div className="relative w-[min(92%,460px)] text-center">
               <div className="hero-name relative z-10 text-[#f3e2b4]">
                 <svg aria-hidden="true" className="mx-auto mb-1 h-7 w-14 text-[#f3e2b4]" viewBox="0 0 64 28" fill="none">
@@ -235,7 +237,7 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
                   <circle cx="50" cy="9" r="1.2" fill="currentColor" />
                 </svg>
                 <div className="relative">
-                  <p className="relative font-fairytale text-[3.6rem] sm:text-8xl leading-none">
+                  <p className="relative font-fairytale text-[2.85rem] sm:text-7xl leading-none">
                     Jaylyn Eirielle
                     <span aria-hidden="true" className="glass-reflect">Jaylyn Eirielle</span>
                   </p>
@@ -264,7 +266,7 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
                         </p>
                       </div>
                       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <p className="hero-eighteen font-playfair text-[4.25rem] sm:text-8xl leading-none tracking-[0.06em] text-[#f3e2b4] mark-enter">
+                        <p className="hero-eighteen font-playfair text-[3.2rem] sm:text-6xl leading-none tracking-[0.06em] text-[#f3e2b4] mark-enter">
                           18
                           <span aria-hidden="true" className="glass-reflect late">18</span>
                         </p>
@@ -273,7 +275,7 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
                   ) : (
                     <p
                       data-gown-mark
-                      className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-playfair leading-none tabular-nums ${heroMark.kind === "eighteen" ? "hero-eighteen text-[4.25rem] sm:text-8xl tracking-[0.06em] text-[#f3e2b4]" : `hero-countdown${heroMark.kind === "clock" ? "" : " hero-countdown-digit"}`}`}
+                      className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-playfair leading-none tabular-nums ${heroMark.kind === "eighteen" ? "hero-eighteen text-[3.2rem] sm:text-6xl tracking-[0.06em] text-[#f3e2b4]" : `hero-countdown${heroMark.kind === "clock" ? "" : " hero-countdown-digit"}`}`}
                     >
                       {heroMark.text}
                       <span aria-hidden="true" className="glass-reflect late">{heroMark.text}</span>
@@ -539,16 +541,16 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
         }
 
         .hero-mark-slot {
-          height: 4.25rem;
+          height: 3.2rem;
           transition: height 3.2s ease;
         }
 
         .hero-mark-slot.is-clock {
-          height: 3.7rem;
+          height: 2.9rem;
         }
 
         .hero-mark-slot.is-digit {
-          height: 6.4rem;
+          height: 4.5rem;
         }
 
         .mark-leave,
@@ -568,8 +570,8 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
 
         @keyframes markLeave {
           0% { opacity: 1; transform: scale(1); }
-          68% { opacity: 1; transform: scale(0.664); }
-          100% { opacity: 0; transform: scale(0.664); }
+          68% { opacity: 1; transform: scale(0.71); }
+          100% { opacity: 0; transform: scale(0.71); }
         }
 
         @keyframes markEnter {
@@ -578,7 +580,7 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
         }
 
         .hero-countdown {
-          font-size: 3.7rem;
+          font-size: 2.9rem;
           letter-spacing: 0.03em;
           color: #fff6d4;
           -webkit-text-stroke: 2px #6a3410;
@@ -589,7 +591,7 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
         }
 
         .hero-countdown-digit {
-          font-size: 6.4rem;
+          font-size: 4.5rem;
           letter-spacing: 0;
         }
 
@@ -599,11 +601,11 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
         }
 
         @media (min-width: 640px) {
-          .hero-countdown { font-size: 4.6rem; }
-          .hero-countdown-digit { font-size: 8rem; }
-          .hero-mark-slot { height: 6rem; }
-          .hero-mark-slot.is-clock { height: 4.6rem; }
-          .hero-mark-slot.is-digit { height: 8rem; }
+          .hero-countdown { font-size: 3.5rem; }
+          .hero-countdown-digit { font-size: 5.3rem; }
+          .hero-mark-slot { height: 3.75rem; }
+          .hero-mark-slot.is-clock { height: 3.5rem; }
+          .hero-mark-slot.is-digit { height: 5.3rem; }
         }
 
         @keyframes glassReflect {
@@ -674,26 +676,34 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
           -webkit-mask-image: linear-gradient(
             to bottom,
             transparent 0%,
-            transparent 16%,
-            rgba(0, 0, 0, 0.4) 24%,
+            transparent 8%,
+            #000 18%,
             #000 34%,
-            rgba(0, 0, 0, 0.62) 58%,
-            rgba(0, 0, 0, 0.18) 82%,
+            rgba(0, 0, 0, 0.55) 52%,
+            rgba(0, 0, 0, 0.18) 68%,
+            transparent 84%,
             transparent 100%
           );
           mask-image: linear-gradient(
             to bottom,
             transparent 0%,
-            transparent 16%,
-            rgba(0, 0, 0, 0.4) 24%,
+            transparent 8%,
+            #000 18%,
             #000 34%,
-            rgba(0, 0, 0, 0.62) 58%,
-            rgba(0, 0, 0, 0.18) 82%,
+            rgba(0, 0, 0, 0.55) 52%,
+            rgba(0, 0, 0, 0.18) 68%,
+            transparent 84%,
             transparent 100%
           );
           -webkit-mask-repeat: no-repeat;
           mask-repeat: no-repeat;
-          filter: blur(18px);
+          transform: translateZ(0);
+        }
+
+        .gown-feather-blur {
+          position: absolute;
+          inset: 0;
+          filter: blur(22px);
           transform: translateZ(0);
         }
 
@@ -740,23 +750,21 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
 
         .gown-haze {
           position: absolute;
-          inset: -28% -8%;
-          background: radial-gradient(ellipse at 50% 58%, rgba(255, 236, 196, 0.95), rgba(255, 196, 110, 0.62) 40%, rgba(255, 160, 70, 0.22) 64%, transparent 80%);
-          filter: blur(22px);
+          inset: 8% -4% 10%;
+          background: radial-gradient(ellipse at 50% 50%, rgba(255, 236, 196, 0.9), rgba(255, 210, 140, 0.42) 28%, rgba(255, 176, 90, 0.12) 58%, transparent 78%);
         }
 
         .gown-shimmer {
           position: absolute;
-          inset: 2% 0 0;
+          inset: 22% 0 24%;
           background: linear-gradient(
             to bottom,
             transparent 0%,
-            rgba(255, 228, 170, 0.35) 22%,
-            rgba(255, 252, 244, 0.88) 48%,
-            rgba(255, 196, 110, 0.4) 70%,
+            rgba(255, 236, 190, 0.22) 22%,
+            rgba(255, 252, 244, 0.92) 50%,
+            rgba(255, 214, 140, 0.24) 78%,
             transparent 100%
           );
-          filter: blur(16px);
         }
 
         .change-glitter {

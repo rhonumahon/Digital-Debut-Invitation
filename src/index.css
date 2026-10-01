@@ -29,6 +29,24 @@ html, body {
   background: #06101c;
 }
 
+html {
+  scroll-padding-top: 4.5rem;
+}
+
+.page-jump {
+  font-family: "Cinzel", serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff6e8;
+  text-shadow: 0 1px 6px rgba(6, 16, 28, 0.9);
+  padding: 0.35rem 0.15rem;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
 .invite-btn {
   font-family: "Cinzel", serif;
   font-size: 14px;
