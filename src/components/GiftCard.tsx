@@ -1,9 +1,39 @@
 import Reveal from "./Reveal";
 import SectionFlourish from "./SectionFlourish";
 
+const GCASH_NUMBER = "09165226110";
 const QR_IMAGE = "/assets/images/gcash-qr.jpg?v=2";
 
+function gcashAppUrl() {
+  if (typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent)) {
+    return "intent://#Intent;scheme=gcash;package=com.globe.gcash.android;end";
+  }
+  return "gcash://";
+}
+
+function copyNumber() {
+  const field = document.createElement("textarea");
+  field.value = GCASH_NUMBER;
+  field.setAttribute("readonly", "");
+  field.style.position = "fixed";
+  field.style.top = "0";
+  field.style.left = "0";
+  field.style.opacity = "0";
+  document.body.appendChild(field);
+  field.focus();
+  field.select();
+  field.setSelectionRange(0, GCASH_NUMBER.length);
+  document.execCommand("copy");
+  document.body.removeChild(field);
+  navigator.clipboard?.writeText(GCASH_NUMBER).catch(() => {});
+}
+
 export default function GiftCard() {
+  const openGcash = () => {
+    copyNumber();
+    window.location.href = gcashAppUrl();
+  };
+
   return (
     <section className="px-6 md:px-12 pt-4 pb-8" id="gift">
       <SectionFlourish />
@@ -29,6 +59,25 @@ export default function GiftCard() {
           <p className="font-cinzel text-base tracking-[0.12em] uppercase text-[#7a3e18] mt-4">
             GCash · RO****N U.
           </p>
+          <p className="font-garamond text-lg text-[#5c3418] leading-relaxed mt-3">
+            Scan or{" "}
+            <a
+              href={QR_IMAGE}
+              download="jaylyn-gcash-qr.jpg"
+              className="underline decoration-[#c4894a] underline-offset-4"
+            >
+              save the QR code
+            </a>
+            .
+          </p>
+          <button
+            type="button"
+            className="invite-btn mt-5 w-full"
+            style={{ whiteSpace: "normal" }}
+            onClick={openGcash}
+          >
+            Copy number and open in GCash
+          </button>
           <p className="font-garamond text-base text-[#8a5a32] mt-4 leading-relaxed">
             GCash to GCash is free. A fee may apply if you send from another bank.
           </p>
