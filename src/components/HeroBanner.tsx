@@ -26,7 +26,7 @@ const NAME_GLINTS = [
 
 const GOWN_COPPER = "/assets/images/debut-gown-white.png?v=15";
 const GOWN_BLUE = "/assets/images/debut-gown-blue.png?v=15";
-export const GOWN_CHANGE_AT = new Date("2026-10-02T13:03:00").getTime();
+export const GOWN_CHANGE_AT = new Date("2026-11-07T17:40:00").getTime();
 const WIPE_SECONDS = 16;
 const GOWN_WIPE_MS = WIPE_SECONDS * 1000;
 const TIMEOUT_MAX = 2_147_483_647;
