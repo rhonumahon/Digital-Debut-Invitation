@@ -7,10 +7,14 @@ import {
 const DEFAULT_PALACE_BG = "/assets/images/elsa-ice-palace-vertical.png";
 const SLICE_COUNT = 8;
 
+export type RisingIceSliceSide = "all" | "left" | "right";
+
 export type RisingIceCrystalsWindow = {
   start: number;
   end: number;
   backgroundImage?: string;
+  /** Which vertical slices rise during this window (default all). */
+  sliceSide?: RisingIceSliceSide;
 };
 
 type PalaceSlice = {
@@ -164,6 +168,16 @@ function sliceFrame(
   };
 }
 
+function slicesForSide(
+  slices: PalaceSlice[],
+  side: RisingIceSliceSide = "all",
+): PalaceSlice[] {
+  if (side === "all") return slices;
+  const half = SLICE_COUNT / 2;
+  if (side === "right") return slices.filter((s) => s.index >= half);
+  return slices.filter((s) => s.index < half);
+}
+
 function drawPalaceSlices(
   ctx: CanvasRenderingContext2D,
   palace: ProcessedPalace,
@@ -172,11 +186,13 @@ function drawPalaceSlices(
   h: number,
   master: number,
   localT: number,
+  sliceSide: RisingIceSliceSide = "all",
 ) {
   const sliceW = w / SLICE_COUNT;
   const riseTravel = h * 0.38;
+  const active = slicesForSide(slices, sliceSide);
 
-  for (const slice of slices) {
+  for (const slice of active) {
     const frame = sliceFrame(slice, localT, riseTravel);
     if (!frame) continue;
 
@@ -221,7 +237,10 @@ export default function RisingIceCrystalsOverlay({
     [windowsInput],
   );
   const windowKey = windows
-    .map((w) => `${w.start}-${w.end}-${w.backgroundImage ?? ""}`)
+    .map(
+      (w) =>
+        `${w.start}-${w.end}-${w.backgroundImage ?? ""}-${w.sliceSide ?? "all"}`,
+    )
     .join("|");
   const clockRef = useRef<{ media: number; wall: number } | undefined>(undefined);
   const bgSrc = windows[0]?.backgroundImage ?? DEFAULT_PALACE_BG;
@@ -319,7 +338,16 @@ export default function RisingIceCrystalsOverlay({
         const master = windowOpacity(t, win.start, win.end);
         if (master <= 0.002 || !palace?.ready) continue;
         anyVisible = true;
-        drawPalaceSlices(ctx, palace, slices, w, h, master, t - win.start);
+        drawPalaceSlices(
+          ctx,
+          palace,
+          slices,
+          w,
+          h,
+          master,
+          t - win.start,
+          win.sliceSide ?? "all",
+        );
       }
 
       if (!anyVisible) {

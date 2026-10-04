@@ -517,7 +517,7 @@ export default function App() {
             start: 43,
             end: 54,
             style: "side",
-            glitterBurst: { start: 47.5, end: 49.25 },
+            glitterBurst: { start: 46, end: 47.75 },
           },
           { start: 67.5, end: 75, style: "finale" },
         ]}
@@ -526,6 +526,12 @@ export default function App() {
             start: 6,
             end: 10,
             backgroundImage: "/assets/images/elsa-ice-palace-vertical.png",
+          },
+          {
+            start: 17.5,
+            end: 20,
+            backgroundImage: "/assets/images/elsa-ice-palace-vertical.png",
+            sliceSide: "right",
           },
           {
             start: 20.5,
