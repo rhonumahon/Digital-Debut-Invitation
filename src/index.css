@@ -248,6 +248,31 @@ html {
 .debutant-moment-video {
   -webkit-tap-highlight-color: transparent;
 }
+.debutant-moment-video--pan {
+  transform: translateZ(0);
+}
+
+.crystal-edge-overlay {
+  contain: layout style paint;
+}
+
+.crystal-edge-glow {
+  animation: crystal-edge-breathe 3.6s ease-in-out infinite;
+}
+
+.ice-snow-overlay {
+  contain: layout style paint;
+}
+
+@keyframes crystal-edge-breathe {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 1;
+  }
+}
 .debutant-moment-video::-webkit-media-controls {
   display: none !important;
 }

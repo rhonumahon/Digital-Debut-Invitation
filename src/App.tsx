@@ -511,6 +511,30 @@ export default function App() {
         video="/assets/debutant-elsa.mp4"
         videoSound
         compactVideo
+        videoCrystalMoments={[{ start: 43, end: 54 }]}
+        iceCrystalAt={[
+          { time: 11 },
+          { time: 14 },
+          { time: 20.5 },
+          { time: 27.5 },
+          { time: 43, variant: "grand" },
+          { time: 50, variant: "quick" },
+          { time: 52, variant: "quick" },
+        ]}
+        videoPanKeyframes={[
+          { time: 0, xPercent: 50 },
+          { time: 9, xPercent: 16 },
+          { time: 15, xPercent: 50 },
+          { time: 18, xPercent: 84 },
+          { time: 23, xPercent: 16 },
+          { time: 28, xPercent: 84 },
+          { time: 34, xPercent: 50, scale: 1 },
+          { time: 35, xPercent: 67, scale: 1.14 },
+          { time: 40, xPercent: 50, scale: 1.12 },
+          { time: 63, xPercent: 60, scale: 1.62 },
+          { time: 66.9, xPercent: 60, scale: 1.62 },
+          { time: 67, xPercent: 58, scale: 1, ease: "linear" },
+        ]}
         alt="Jaylyn Eirielle as Elsa in a senior high stage play of Frozen"
         kicker="In senior high"
         motto="She was Elsa, and the name stayed."
