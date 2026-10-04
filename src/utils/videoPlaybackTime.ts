@@ -25,3 +25,12 @@ export function estimatedVideoPlaybackTime(
 
   return extrapolated;
 }
+
+/** True when playback jumped backward (loop or seek to an earlier time). */
+export function isVideoLoopJump(
+  previousMedia: number | undefined,
+  currentMedia: number,
+): boolean {
+  if (previousMedia === undefined) return false;
+  return currentMedia + 0.35 < previousMedia;
+}

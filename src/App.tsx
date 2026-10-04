@@ -517,14 +517,26 @@ export default function App() {
             start: 43,
             end: 54,
             style: "side",
-            dressShimmer: { start: 43, end: 49 },
+            glitterBurst: { start: 47.5, end: 49.25 },
           },
           { start: 67.5, end: 75, style: "finale" },
+        ]}
+        risingIceCrystals={[
+          {
+            start: 6,
+            end: 10,
+            backgroundImage: "/assets/images/elsa-ice-palace-vertical.png",
+          },
+          {
+            start: 20.5,
+            end: 22,
+            backgroundImage: "/assets/images/elsa-ice-palace-vertical.png",
+          },
         ]}
         iceCrystalAt={[
           { time: 11 },
           { time: 13 },
-          { time: 20.5 },
+          { time: 20 },
           { time: 27.5 },
           { time: 43, variant: "grand" },
           { time: 50, variant: "topBreeze", swirl: "left" },

@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { estimatedVideoPlaybackTime } from "../utils/videoPlaybackTime";
+import {
+  estimatedVideoPlaybackTime,
+  isVideoLoopJump,
+} from "../utils/videoPlaybackTime";
 
 export type IceCrystalVariant =
   | "standard"
@@ -418,12 +421,23 @@ export default function IceCrystalVideoOverlay({
   useEffect(() => {
     if (!video || !triggers.length) return;
 
+    const resetForLoop = () => {
+      firedRef.current.clear();
+      setBursts([]);
+    };
+
     const syncClock = () => {
-      clockRef.current = { media: video.currentTime, wall: performance.now() };
+      const prev = clockRef.current?.media;
+      const media = video.currentTime;
+      if (isVideoLoopJump(prev, media)) {
+        resetForLoop();
+      }
+      clockRef.current = { media, wall: performance.now() };
     };
 
     const mediaTime = () => {
-      if (clockRef.current && video.currentTime + 0.35 < clockRef.current.media) {
+      if (clockRef.current && isVideoLoopJump(clockRef.current.media, video.currentTime)) {
+        resetForLoop();
         clockRef.current = { media: video.currentTime, wall: performance.now() };
       }
       return estimatedVideoPlaybackTime(video, clockRef.current);
@@ -451,35 +465,56 @@ export default function IceCrystalVideoOverlay({
     };
 
     let rafId = 0;
+    let ticking = false;
+
     const tick = () => {
       syncClock();
       maybeFire(mediaTime());
-      if (!video.paused && !video.ended) {
+      if (!video.paused && ticking) {
         rafId = requestAnimationFrame(tick);
       }
     };
 
-    const onPlay = () => {
-      syncClock();
+    const startTick = () => {
+      if (ticking) return;
+      ticking = true;
+      cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(tick);
     };
-    const onPause = () => {
+
+    const stopTick = () => {
+      ticking = false;
       cancelAnimationFrame(rafId);
+    };
+
+    const onPlay = () => {
+      syncClock();
+      startTick();
+    };
+    const onPause = () => {
+      stopTick();
       syncClock();
       maybeFire(video.currentTime);
+    };
+    const onLoopPoint = () => {
+      syncClock();
+      maybeFire(video.currentTime);
+      if (!video.paused) startTick();
     };
 
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onPause);
-    video.addEventListener("seeked", syncClock);
+    video.addEventListener("ended", onLoopPoint);
+    video.addEventListener("seeked", onLoopPoint);
     video.addEventListener("timeupdate", syncClock);
-    if (!video.paused) onPlay();
+    if (!video.paused) startTick();
 
     return () => {
-      cancelAnimationFrame(rafId);
+      stopTick();
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
-      video.removeEventListener("seeked", syncClock);
+      video.removeEventListener("ended", onLoopPoint);
+      video.removeEventListener("seeked", onLoopPoint);
       video.removeEventListener("timeupdate", syncClock);
     };
   }, [video, triggerKey, triggers]);

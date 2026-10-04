@@ -9,6 +9,9 @@ import {
 import IceCrystalVideoOverlay, {
   type IceCrystalTrigger,
 } from "./IceCrystalVideoOverlay";
+import RisingIceCrystalsOverlay, {
+  type RisingIceCrystalsWindow,
+} from "./RisingIceCrystalsOverlay";
 import CrystalTransformOverlay, {
   type CrystalMoment,
 } from "./CrystalTransformOverlay";
@@ -91,6 +94,8 @@ type DebutantMomentProps = {
   videoPanKeyframes?: VideoPanKeyframe[];
   /** Clip times (seconds) to flash ice crystals on the first video. */
   iceCrystalAt?: IceCrystalTrigger[];
+  /** Sustained rising shiny ice crystals between start and end (clip seconds). */
+  risingIceCrystals?: RisingIceCrystalsWindow | RisingIceCrystalsWindow[];
   /** Ice/crystal color wash on the video between start and end (clip seconds). */
   videoCrystalMoments?: CrystalMoment[];
   /** Hide site-wide falling petals while this block’s video is on screen. */
@@ -115,6 +120,7 @@ export default function DebutantMoment({
   compactVideo = false,
   videoPanKeyframes,
   iceCrystalAt,
+  risingIceCrystals,
   videoCrystalMoments,
   hideGlobalPetalsWhileInView = false,
 }: DebutantMomentProps) {
@@ -418,6 +424,12 @@ export default function DebutantMoment({
                     <IceCrystalVideoOverlay
                       video={crystalVideoEl}
                       triggers={iceCrystalAt}
+                    />
+                  ) : null}
+                  {index === 0 && risingIceCrystals ? (
+                    <RisingIceCrystalsOverlay
+                      video={crystalVideoEl}
+                      windows={risingIceCrystals}
                     />
                   ) : null}
                 </div>

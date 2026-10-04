@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
-import { estimatedVideoPlaybackTime } from "../utils/videoPlaybackTime";
+import {
+  estimatedVideoPlaybackTime,
+  isVideoLoopJump,
+} from "../utils/videoPlaybackTime";
 
 export type CrystalMomentStyle = "side" | "finale";
 
@@ -7,8 +10,8 @@ export type CrystalMoment = {
   start: number;
   end: number;
   style?: CrystalMomentStyle;
-  /** Center glitter on the dress (seconds, within the video). */
-  dressShimmer?: { start: number; end: number };
+  /** Quick one-shot sparkle burst (clip seconds). */
+  glitterBurst?: { start: number; end: number };
 };
 
 function crystalIntensity(t: number, start: number, end: number): number {
@@ -222,68 +225,166 @@ function SoftIceBlock({ block }: { block: SoftBlockSpec }) {
   );
 }
 
-type DressGlitterSpec = {
-  id: string;
+type SimpleGlitter = {
+  id: number;
   x: number;
   y: number;
   size: number;
-  delay: number;
+  order: number;
 };
 
-function dressGlitterSeed(i: number): number {
+function glitterSeed(i: number): number {
   const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
   return x - Math.floor(x);
 }
 
-/** Center dress silhouette — ellipse around mid-frame body. */
-const DRESS_GLITTERS: DressGlitterSpec[] = Array.from({ length: 16 }, (_, i) => {
-  const r1 = dressGlitterSeed(i * 3.1);
-  const r2 = dressGlitterSeed(i * 5.7 + 2);
-  const r3 = dressGlitterSeed(i * 7.3 + 4);
-  const angle = r1 * Math.PI * 2;
-  const radius = 0.35 + r2 * 0.65;
-  const cx = 50;
-  const cy = 58;
-  const rx = 20;
-  const ry = 24;
-  return {
-    id: `g-${i}`,
-    x: cx + Math.cos(angle) * rx * radius + (r3 - 0.5) * 4,
-    y: cy + Math.sin(angle) * ry * radius + (dressGlitterSeed(i + 9) - 0.5) * 5,
-    size: 1.4 + r3 * 2.2,
-    delay: r2 * 2.8,
-  };
-});
+function easeOutQuint(t: number) {
+  return 1 - (1 - t) ** 5;
+}
 
-function DressShimmerLayer() {
+function easeInQuint(t: number) {
+  return t ** 5;
+}
+
+function buildSimpleGlitters(): SimpleGlitter[] {
+  const items = Array.from({ length: 48 }, (_, i) => {
+    const r1 = glitterSeed(i * 2.7);
+    const r2 = glitterSeed(i * 4.1 + 1);
+    const r3 = glitterSeed(i * 5.9 + 3);
+    const r4 = glitterSeed(i * 7.3 + 2);
+    const tiny = r4 > 0.34;
+    return {
+      id: i,
+      x: 46 + r1 * 42,
+      y: 52 + r2 * 36,
+      size: tiny ? 1.5 + r3 * 1.3 : 3.2 + r3 * 2.6,
+      order: 0,
+    };
+  });
+  items.sort((a, b) => b.y - a.y);
+  return items.map((g, order) => ({ ...g, order }));
+}
+
+const SIMPLE_GLITTERS = buildSimpleGlitters();
+const GLITTER_STAGGER_S = 0.024;
+const GLITTER_POP_S = 0.24;
+const GLITTER_HOLD_S = 0.1;
+const GLITTER_FADE_S = 0.24;
+const GLITTER_GLOW_TRAVEL_PX = 16;
+const GLITTER_BURST_S =
+  (SIMPLE_GLITTERS.length - 1) * GLITTER_STAGGER_S +
+  GLITTER_POP_S +
+  GLITTER_HOLD_S +
+  GLITTER_FADE_S;
+
+function SimpleGlitterLayer() {
   return (
-    <div className="dress-shimmer-layer pointer-events-none absolute inset-0">
-      {DRESS_GLITTERS.map((g) => (
+    <div className="simple-glitter-layer pointer-events-none absolute inset-0">
+      {SIMPLE_GLITTERS.map((g) => (
         <span
           key={g.id}
-          className="dress-shimmer-spark absolute block rounded-full"
-          style={{
-            left: `${g.x}%`,
-            top: `${g.y}%`,
-            width: g.size,
-            height: g.size,
-            animationDelay: `${g.delay}s`,
-          }}
-        />
+          data-simple-glitter=""
+          data-x={g.x}
+          data-y={g.y}
+          data-size={g.size}
+          data-order={g.order}
+          className="video-burst-glitter-host absolute"
+        >
+          <span aria-hidden className="video-burst-glitter-glow" />
+          <span aria-hidden className="video-burst-glitter-star" />
+        </span>
       ))}
     </div>
   );
 }
 
-function dressShimmerIntensity(
+function glitterBurstElapsed(
   t: number,
   moments: CrystalMoment[],
-): number {
-  return moments.reduce((peak, moment) => {
-    const span = moment.dressShimmer;
-    if (!span) return peak;
-    return Math.max(peak, crystalIntensity(t, span.start, span.end));
-  }, 0);
+): number | null {
+  for (const moment of moments) {
+    const burst = moment.glitterBurst;
+    if (!burst || t < burst.start || t > burst.end) continue;
+    return t - burst.start;
+  }
+  return null;
+}
+
+type GlitterFrame = {
+  starAlpha: number;
+  glowAlpha: number;
+  glowY: number;
+  glowScale: number;
+};
+
+function simpleGlitterFrame(elapsed: number, order: number): GlitterFrame {
+  const off: GlitterFrame = {
+    starAlpha: 0,
+    glowAlpha: 0,
+    glowY: GLITTER_GLOW_TRAVEL_PX,
+    glowScale: 0.32,
+  };
+  const start = order * GLITTER_STAGGER_S;
+  const local = elapsed - start;
+
+  if (local <= 0) return off;
+
+  if (local < GLITTER_POP_S) {
+    const t = easeOutQuint(local / GLITTER_POP_S);
+    const starT = easeOutQuint(Math.min(1, Math.max(0, (t - 0.18) / 0.82)));
+    return {
+      glowAlpha: t * 0.92,
+      glowY: GLITTER_GLOW_TRAVEL_PX * (1 - t),
+      glowScale: 0.32 + 0.68 * t,
+      starAlpha: starT,
+    };
+  }
+
+  const holdEnd = GLITTER_POP_S + GLITTER_HOLD_S;
+  if (local < holdEnd) {
+    return {
+      starAlpha: 1,
+      glowAlpha: 0.92,
+      glowY: 0,
+      glowScale: 1,
+    };
+  }
+
+  const fadeLocal = local - holdEnd;
+  if (fadeLocal < GLITTER_FADE_S) {
+    const t = easeInQuint(fadeLocal / GLITTER_FADE_S);
+    return {
+      starAlpha: 1 - t,
+      glowAlpha: 0.92 * (1 - t),
+      glowY: -5 * t,
+      glowScale: 1 - 0.35 * t,
+    };
+  }
+
+  return off;
+}
+
+function paintSimpleGlitter(layer: HTMLDivElement, elapsed: number) {
+  const dots = layer.querySelectorAll<HTMLElement>("[data-simple-glitter]");
+  dots.forEach((el) => {
+    const x = Number(el.dataset.x);
+    const y = Number(el.dataset.y);
+    const size = Number(el.dataset.size ?? 2.5);
+    const order = Number(el.dataset.order ?? 0);
+    const frame =
+      elapsed >= GLITTER_BURST_S
+        ? simpleGlitterFrame(GLITTER_BURST_S + 1, order)
+        : simpleGlitterFrame(elapsed, order);
+
+    el.style.left = `${x}%`;
+    el.style.top = `${y}%`;
+    el.style.width = `${size}px`;
+    el.style.height = `${size}px`;
+    el.style.setProperty("--star-alpha", String(frame.starAlpha));
+    el.style.setProperty("--glow-alpha", String(frame.glowAlpha));
+    el.style.setProperty("--glow-y", `${frame.glowY}px`);
+    el.style.setProperty("--glow-scale", String(frame.glowScale));
+  });
 }
 
 function SideBeamLayer() {
@@ -341,11 +442,11 @@ export default function CrystalTransformOverlay({
   const overlayRef = useRef<HTMLDivElement>(null);
   const sideLayerRef = useRef<HTMLDivElement>(null);
   const finaleLayerRef = useRef<HTMLDivElement>(null);
-  const dressLayerRef = useRef<HTMLDivElement>(null);
+  const glitterLayerRef = useRef<HTMLDivElement>(null);
   const momentKey = moments
     .map(
       (m) =>
-        `${m.start}-${m.end}-${m.style ?? "side"}-${m.dressShimmer?.start ?? ""}-${m.dressShimmer?.end ?? ""}`,
+        `${m.start}-${m.end}-${m.style ?? "side"}-${m.glitterBurst?.start ?? ""}-${m.glitterBurst?.end ?? ""}`,
     )
     .join("|");
 
@@ -353,10 +454,6 @@ export default function CrystalTransformOverlay({
     if (!video || !moments.length) return;
 
     const clock = { media: 0, wall: 0 };
-    const syncClock = () => {
-      clock.media = video.currentTime;
-      clock.wall = performance.now();
-    };
 
     const intensityForStyle = (time: number, style: CrystalMomentStyle) =>
       moments
@@ -371,19 +468,19 @@ export default function CrystalTransformOverlay({
       const root = overlayRef.current;
       const sideLayer = sideLayerRef.current;
       const finaleLayer = finaleLayerRef.current;
-      const dressLayer = dressLayerRef.current;
-      if (!root || !sideLayer || !finaleLayer || !dressLayer) return;
+      const glitterLayer = glitterLayerRef.current;
+      if (!root || !sideLayer || !finaleLayer || !glitterLayer) return;
 
       const side = intensityForStyle(time, "side");
       const finale = intensityForStyle(time, "finale");
-      const dress = dressShimmerIntensity(time, moments);
-      const active = side > 0.008 || finale > 0.008 || dress > 0.008;
+      const glitterAt = glitterBurstElapsed(time, moments);
+      const active = side > 0.008 || finale > 0.008 || glitterAt !== null;
 
       if (!active) {
         root.style.visibility = "hidden";
         sideLayer.style.opacity = "0";
         finaleLayer.style.opacity = "0";
-        dressLayer.style.opacity = "0";
+        glitterLayer.style.opacity = "0";
         return;
       }
 
@@ -391,14 +488,32 @@ export default function CrystalTransformOverlay({
       root.style.opacity = "1";
       sideLayer.style.opacity = String(side * 0.92);
       finaleLayer.style.opacity = String(finale * 0.96);
-      dressLayer.style.opacity = String(Math.min(1, dress * 1.05));
+      if (glitterAt !== null) {
+        glitterLayer.style.opacity = "1";
+        paintSimpleGlitter(glitterLayer, glitterAt);
+      } else {
+        glitterLayer.style.opacity = "0";
+      }
+    };
+
+    const syncClock = () => {
+      const prev = clock.media;
+      const media = video.currentTime;
+      if (isVideoLoopJump(prev, media)) {
+        clock.media = media;
+        clock.wall = performance.now();
+        paint(media);
+        return;
+      }
+      clock.media = media;
+      clock.wall = performance.now();
     };
 
     let rafId = 0;
     let running = false;
 
     const tick = () => {
-      if (clock.media && video.currentTime + 0.35 < clock.media) {
+      if (isVideoLoopJump(clock.media, video.currentTime)) {
         syncClock();
       }
       const time = estimatedVideoPlaybackTime(video, clock);
@@ -421,9 +536,19 @@ export default function CrystalTransformOverlay({
       paint(video.currentTime);
     };
 
+    const onLoopPoint = () => {
+      syncClock();
+      paint(video.currentTime);
+      if (!video.paused && !running) {
+        running = true;
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onPause);
-    video.addEventListener("seeked", onPause);
+    video.addEventListener("ended", onLoopPoint);
+    video.addEventListener("seeked", onLoopPoint);
     video.addEventListener("timeupdate", syncClock);
     syncClock();
     paint(video.currentTime);
@@ -434,7 +559,8 @@ export default function CrystalTransformOverlay({
       cancelAnimationFrame(rafId);
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
-      video.removeEventListener("seeked", onPause);
+      video.removeEventListener("ended", onLoopPoint);
+      video.removeEventListener("seeked", onLoopPoint);
       video.removeEventListener("timeupdate", syncClock);
       paint(-1);
     };
@@ -455,8 +581,8 @@ export default function CrystalTransformOverlay({
       <div ref={finaleLayerRef} className="absolute inset-0" style={{ opacity: 0 }}>
         <FinaleBeamLayer />
       </div>
-      <div ref={dressLayerRef} className="absolute inset-0" style={{ opacity: 0 }}>
-        <DressShimmerLayer />
+      <div ref={glitterLayerRef} className="absolute inset-0" style={{ opacity: 0 }}>
+        <SimpleGlitterLayer />
       </div>
     </div>
   );
