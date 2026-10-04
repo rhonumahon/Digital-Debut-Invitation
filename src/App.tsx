@@ -22,6 +22,10 @@ import GiftCard from "./components/GiftCard";
 import DebutantMoment from "./components/DebutantMoment";
 import SectionFlourish from "./components/SectionFlourish";
 import Reveal, { RevealReadyProvider } from "./components/Reveal";
+import {
+  InvitationAudioProvider,
+  notifyInvitationUserActivation,
+} from "./contexts/InvitationAudioContext";
 
 const INTRO_MUSIC = "/assets/intro.mp3";
 const FINALE_MUSIC = "/assets/last20sec.mp3";
@@ -123,6 +127,7 @@ export default function App() {
   }, [protocolOpen]);
 
   const startMusic = () => {
+    notifyInvitationUserActivation();
     const audio = audioRef.current;
     if (!audio || !audio.paused || suppressAutoplay.current) return;
     audio.muted = false;
@@ -371,6 +376,7 @@ export default function App() {
         </div>
       )}
 
+      <InvitationAudioProvider>
       <RevealReadyProvider ready={!showEnvelope}>
       {/* Hero section featuring the overall Somerset Garden backdrop image and falling petals */}
       <HeroBanner titlesVisible={!showEnvelope && !promptOpen && !protocolOpen} />
@@ -470,17 +476,82 @@ export default function App() {
       />
 
       <DebutantMoment
+        image="/assets/images/debutant-honors-jhs.jpg"
+        alt="Jaylyn Eirielle at her junior high moving-up ceremony with honors"
+        kicker="Her honors"
+        motto="High Honors, from junior high through senior high."
+        reason="Jaylyn was consistent with High Honors through her high school and senior high school years—the same discipline she brings to nursing and to this evening."
+        flip
+        slides={[
+          {
+            src: "/assets/images/debutant-honors-jhs.jpg",
+            alt: "Jaylyn Eirielle at her junior high moving-up ceremony with honors",
+            fit: "object-[center_35%]",
+          },
+          {
+            src: "/assets/images/debutant-honors-shs-medals.jpg",
+            alt: "Jaylyn Eirielle in senior high uniform with graduation medals",
+            fit: "object-[center_22%]",
+          },
+          {
+            src: "/assets/images/debutant-honors-shs-stage.jpg",
+            alt: "Jaylyn Eirielle on stage at senior high recognition with high honors",
+            fit: "object-[center_28%]",
+          },
+          {
+            src: "/assets/images/debutant-honors-shs-poster.jpg",
+            alt: "Senior high recognition for Jaylyn Eirielle with high honors",
+            fit: "object-[center_30%]",
+          },
+        ]}
+      />
+
+      <DebutantMoment
         image="/assets/images/debutant-elsa.jpg?v=2"
+        video="/assets/debutant-elsa.mp4"
+        videoSound
+        compactVideo
         alt="Jaylyn Eirielle as Elsa in a senior high stage play of Frozen"
         kicker="In senior high"
         motto="She was Elsa, and the name stayed."
         reason="Jaylyn performed as Elsa in a stage play of Frozen. Soon, everyone who saw her at school called her Elsa."
         flip
+        slides={[
+          {
+            src: "/assets/images/debutant-elsa.jpg?v=2",
+            alt: "Jaylyn Eirielle as Elsa in a senior high stage play of Frozen",
+          },
+        ]}
+      />
+
+      <DebutantMoment
+        image="/assets/images/debutant-poster-making.jpg"
+        alt="Jaylyn Eirielle working on a poster"
+        kicker="In poster and slogan"
+        motto="Poster making, slogans, and a national stage."
+        reason="Jaylyn also takes up poster making and slogans. At the Philippine Arena National, she won third place."
+        flip
+        slides={[
+          {
+            src: "/assets/images/debutant-poster-making.jpg",
+            alt: "Jaylyn Eirielle working on a poster",
+            fit: "object-[center_30%]",
+          },
+          {
+            src: "/assets/images/debutant-poster-art.jpg",
+            alt: "Jaylyn Eirielle's abstract painting poster",
+            fit: "object-[center_42%]",
+          },
+        ]}
       />
 
       <DebutantMoment
         image="/assets/images/debutant-pageant.jpg"
-        video="/assets/debutant-pageant.mp4"
+        videos={[
+          "/assets/debutant-pageant.mp4",
+          "/assets/debutant-pageant-2.mp4",
+        ]}
+        videoSound
         alt="Jaylyn Eirielle walking a pageant stage"
         kicker="On the stage"
         motto="She is also doing pageants."
@@ -537,6 +608,7 @@ export default function App() {
         </Reveal>
       </footer>
       </RevealReadyProvider>
+      </InvitationAudioProvider>
 
       {/* Background audio lives in index.html so a return visit can start it before the page finishes loading. */}
 
@@ -552,6 +624,7 @@ export default function App() {
                   audioRef.current.pause();
                   setIsPlaying(false);
                 } else {
+                  notifyInvitationUserActivation();
                   suppressAutoplay.current = false;
                   window.__invitationMusicHeld = false;
                   audioRef.current.muted = false;

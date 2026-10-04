@@ -2,6 +2,10 @@ import { useEffect, useRef } from "react";
 import FadeSlides from "./FadeSlides";
 import Reveal from "./Reveal";
 import SectionFlourish from "./SectionFlourish";
+import {
+  INVITATION_USER_ACTIVATED,
+  useInvitationVideoAudio,
+} from "../contexts/InvitationAudioContext";
 
 type Slide = {
   src: string;
@@ -16,12 +20,17 @@ type DebutantMomentProps = {
   motto: string;
   reason: string;
   video?: string;
+  videos?: string[];
   slides?: Slide[];
   wide?: boolean;
   tall?: boolean;
   flip?: boolean;
   heading?: string;
   headingKicker?: string;
+  /** When true, unmute clips while this block is on screen (after autoplay starts). */
+  videoSound?: boolean;
+  /** Shorter video frame (9:8). Default is full portrait (9:16). */
+  compactVideo?: boolean;
 };
 
 export default function DebutantMoment({
@@ -31,31 +40,86 @@ export default function DebutantMoment({
   motto,
   reason,
   video,
+  videos,
   slides,
   wide = false,
   tall = false,
   flip = false,
   heading,
   headingKicker,
+  videoSound = false,
+  compactVideo = false,
 }: DebutantMomentProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoSources = videos?.length ? videos : video ? [video] : [];
+  const hasVideo = videoSources.length > 0;
+  const figureRef = useRef<HTMLElement>(null);
+  const { setMomentVideosVisible } = useInvitationVideoAudio();
 
   useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.play().catch(() => {});
-        } else {
-          el.pause();
-        }
-      },
-      { threshold: 0.45 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [video]);
+    const root = figureRef.current;
+    if (!root || !hasVideo) return;
+
+    let visibleClips = 0;
+    const syncMomentVisibility = (delta: number) => {
+      const wasVisible = visibleClips > 0;
+      visibleClips = Math.max(0, visibleClips + delta);
+      const nowVisible = visibleClips > 0;
+      if (wasVisible !== nowVisible) setMomentVideosVisible(nowVisible);
+    };
+
+    const playClip = async (el: HTMLVideoElement) => {
+      el.muted = true;
+      try {
+        await el.play();
+        if (!videoSound) return;
+        el.muted = false;
+        await el.play();
+      } catch {
+        el.muted = true;
+        await el.play().catch(() => {});
+      }
+    };
+
+    const unmutePlayingClips = () => {
+      if (!videoSound) return;
+      root.querySelectorAll("video").forEach((el) => {
+        if (el.paused) return;
+        el.muted = false;
+        el.play().catch(() => {});
+      });
+    };
+
+    const clips = Array.from(root.querySelectorAll("video"));
+    const clipInView = new WeakMap<HTMLVideoElement, boolean>();
+    const observers = clips.map((el) => {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          const wasInView = clipInView.get(el) ?? false;
+          const inView = entry.isIntersecting;
+          if (wasInView === inView) return;
+          clipInView.set(el, inView);
+          if (inView) {
+            syncMomentVisibility(1);
+            void playClip(el);
+          } else {
+            el.pause();
+            el.muted = true;
+            syncMomentVisibility(-1);
+          }
+        },
+        { threshold: 0.35 },
+      );
+      observer.observe(el);
+      return observer;
+    });
+
+    window.addEventListener(INVITATION_USER_ACTIVATED, unmutePlayingClips);
+    return () => {
+      window.removeEventListener(INVITATION_USER_ACTIVATED, unmutePlayingClips);
+      if (visibleClips > 0) setMomentVideosVisible(false);
+      observers.forEach((observer) => observer.disconnect());
+    };
+  }, [hasVideo, videoSound, setMomentVideosVisible, videoSources.join("|")]);
 
   const columns = wide
     ? flip
@@ -63,10 +127,14 @@ export default function DebutantMoment({
       : "max-w-5xl md:grid-cols-[1.15fr_0.85fr]"
     : "max-w-4xl md:grid-cols-2";
 
+  const videoFrame = compactVideo
+    ? "aspect-[9/8] object-cover object-center"
+    : "aspect-[9/16] object-cover object-center";
+
   const frame = wide
     ? "aspect-[4/3] object-[center_18%]"
-    : video
-      ? "aspect-[9/16] object-center"
+    : hasVideo
+      ? videoFrame
       : tall
         ? "aspect-[2/3]"
         : "aspect-[3/4] object-[center_12%]";
@@ -91,26 +159,34 @@ export default function DebutantMoment({
         </Reveal>
       )}
       <Reveal className={`bronze-card mx-auto grid items-stretch gap-0 overflow-hidden rounded-3xl ${columns}`}>
-        <figure className={`relative overflow-hidden ${flip ? "md:order-2" : ""}`}>
+        <figure ref={figureRef} className={`relative overflow-hidden ${flip ? "md:order-2" : ""}`}>
           {slides && slides.length > 0 && (
-            <div className={`relative overflow-hidden bg-[#07182e] ${video ? "aspect-[2/3]" : frame}`}>
+            <div className={`relative overflow-hidden bg-[#07182e] ${hasVideo ? "aspect-[2/3]" : frame}`}>
               <FadeSlides slides={slides} />
             </div>
           )}
-          {video ? (
-            <video
-              ref={videoRef}
-              src={video}
-              poster={image}
-              aria-label={alt}
-              className={`w-full object-cover bg-[#07182e] ${frame} ${slides?.length ? "border-t border-[#f09060]/35" : ""}`}
-              playsInline
-              muted
-              loop
-              controls
-              preload="metadata"
-            />
-          ) : !slides?.length ? (
+          {hasVideo
+            ? videoSources.map((src, index) => (
+                <video
+                  key={src}
+                  src={src}
+                  poster={index === 0 ? image : undefined}
+                  aria-label={alt}
+                  className={`w-full object-cover bg-[#07182e] ${frame} ${
+                    slides?.length && index === 0
+                      ? "border-t border-[#f09060]/35"
+                      : index > 0
+                        ? "border-t border-[#f09060]/35"
+                        : ""
+                  }`}
+                  playsInline
+                  muted
+                  loop
+                  controls
+                  preload="metadata"
+                />
+              ))
+            : !slides?.length ? (
             <img src={image} alt={alt} className={`w-full object-cover ${frame}`} />
           ) : null}
         </figure>
