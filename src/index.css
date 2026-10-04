@@ -244,3 +244,19 @@ html {
   background: #f09060;
 }
 
+/* Inline autoplay clips: no native control chrome or dim overlay (especially iOS). */
+.debutant-moment-video {
+  -webkit-tap-highlight-color: transparent;
+}
+.debutant-moment-video::-webkit-media-controls {
+  display: none !important;
+}
+.debutant-moment-video::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+.debutant-moment-video::-webkit-media-controls-panel {
+  display: none !important;
+}
+.debutant-moment-video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+}

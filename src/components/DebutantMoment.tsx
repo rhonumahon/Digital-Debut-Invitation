@@ -172,7 +172,7 @@ export default function DebutantMoment({
                   src={src}
                   poster={index === 0 ? image : undefined}
                   aria-label={alt}
-                  className={`w-full object-cover bg-[#07182e] ${frame} ${
+                  className={`debutant-moment-video w-full object-cover bg-[#07182e] ${frame} ${
                     slides?.length && index === 0
                       ? "border-t border-[#f09060]/35"
                       : index > 0
@@ -182,8 +182,10 @@ export default function DebutantMoment({
                   playsInline
                   muted
                   loop
-                  controls
-                  preload="metadata"
+                  preload="auto"
+                  disablePictureInPicture
+                  disableRemotePlayback
+                  onPlaying={(e) => e.currentTarget.removeAttribute("poster")}
                 />
               ))
             : !slides?.length ? (
