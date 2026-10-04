@@ -93,6 +93,8 @@ type DebutantMomentProps = {
   iceCrystalAt?: IceCrystalTrigger[];
   /** Ice/crystal color wash on the video between start and end (clip seconds). */
   videoCrystalMoments?: CrystalMoment[];
+  /** Hide site-wide falling petals while this block’s video is on screen. */
+  hideGlobalPetalsWhileInView?: boolean;
 };
 
 export default function DebutantMoment({
@@ -114,6 +116,7 @@ export default function DebutantMoment({
   videoPanKeyframes,
   iceCrystalAt,
   videoCrystalMoments,
+  hideGlobalPetalsWhileInView = false,
 }: DebutantMomentProps) {
   const videoSources = videos?.length ? videos : video ? [video] : [];
   const hasVideo = videoSources.length > 0;
@@ -121,7 +124,8 @@ export default function DebutantMoment({
   const [crystalVideoEl, setCrystalVideoEl] = useState<HTMLVideoElement | null>(
     null,
   );
-  const { setMomentVideosVisible } = useInvitationVideoAudio();
+  const { setMomentVideosVisible, setFloatingPetalsSuppressed } =
+    useInvitationVideoAudio();
 
   useEffect(() => {
     const root = figureRef.current;
@@ -132,7 +136,12 @@ export default function DebutantMoment({
       const wasVisible = visibleClips > 0;
       visibleClips = Math.max(0, visibleClips + delta);
       const nowVisible = visibleClips > 0;
-      if (wasVisible !== nowVisible) setMomentVideosVisible(nowVisible);
+      if (wasVisible !== nowVisible) {
+        setMomentVideosVisible(nowVisible);
+        if (hideGlobalPetalsWhileInView) {
+          setFloatingPetalsSuppressed(nowVisible);
+        }
+      }
     };
 
     const playClip = async (el: HTMLVideoElement) => {
@@ -184,10 +193,20 @@ export default function DebutantMoment({
     window.addEventListener(INVITATION_USER_ACTIVATED, unmutePlayingClips);
     return () => {
       window.removeEventListener(INVITATION_USER_ACTIVATED, unmutePlayingClips);
-      if (visibleClips > 0) setMomentVideosVisible(false);
+      if (visibleClips > 0) {
+        setMomentVideosVisible(false);
+        if (hideGlobalPetalsWhileInView) setFloatingPetalsSuppressed(false);
+      }
       observers.forEach((observer) => observer.disconnect());
     };
-  }, [hasVideo, videoSound, setMomentVideosVisible, videoSources.join("|")]);
+  }, [
+    hasVideo,
+    videoSound,
+    hideGlobalPetalsWhileInView,
+    setMomentVideosVisible,
+    setFloatingPetalsSuppressed,
+    videoSources.join("|"),
+  ]);
 
   const panKey =
     videoPanKeyframes

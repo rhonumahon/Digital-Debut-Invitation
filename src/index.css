@@ -273,6 +273,24 @@ html {
     opacity: 1;
   }
 }
+
+@keyframes dress-spark-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.dress-shimmer-spark {
+  transform: translate(-50%, -50%);
+  animation: dress-spark-twinkle 2.8s ease-in-out infinite;
+  background: rgba(255, 255, 255, 0.92);
+}
 .debutant-moment-video::-webkit-media-controls {
   display: none !important;
 }

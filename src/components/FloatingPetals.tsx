@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { useInvitationVideoAudio } from "../contexts/InvitationAudioContext";
 
 const PETAL_FILLS = [
   "radial-gradient(ellipse at 35% 30%, #f0c48a, #d4894a 42%, #b87333)",
@@ -12,6 +13,7 @@ const PETAL_FILLS = [
 ];
 
 export default function FloatingPetals() {
+  const { floatingPetalsHidden } = useInvitationVideoAudio();
   const [petals, setPetals] = useState<Array<{ id: number; left: number; delay: number; duration: number; size: number }>>([]);
 
   useEffect(() => {
@@ -25,6 +27,8 @@ export default function FloatingPetals() {
     }));
     setPetals(tempPetals);
   }, []);
+
+  if (floatingPetalsHidden) return null;
 
   return (
     <>

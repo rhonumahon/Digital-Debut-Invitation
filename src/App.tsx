@@ -228,6 +228,7 @@ export default function App() {
   };
 
   return (
+    <InvitationAudioProvider>
     <div className="text-soft-ink font-garamond min-h-screen selection:bg-primary-rose-light/30 selection:text-[#07182e] transition-colors duration-300 relative isolate">
       {/* Viewport-sized layer. background-attachment:fixed is ignored by iOS and
           then cover scales the photo to the whole page, so a tall phone only
@@ -376,7 +377,6 @@ export default function App() {
         </div>
       )}
 
-      <InvitationAudioProvider>
       <RevealReadyProvider ready={!showEnvelope}>
       {/* Hero section featuring the overall Somerset Garden backdrop image and falling petals */}
       <HeroBanner titlesVisible={!showEnvelope && !promptOpen && !protocolOpen} />
@@ -511,15 +511,38 @@ export default function App() {
         video="/assets/debutant-elsa.mp4"
         videoSound
         compactVideo
-        videoCrystalMoments={[{ start: 43, end: 54 }]}
+        hideGlobalPetalsWhileInView
+        videoCrystalMoments={[
+          {
+            start: 43,
+            end: 54,
+            style: "side",
+            dressShimmer: { start: 43, end: 49 },
+          },
+          { start: 67.5, end: 75, style: "finale" },
+        ]}
         iceCrystalAt={[
           { time: 11 },
-          { time: 14 },
+          { time: 13 },
           { time: 20.5 },
           { time: 27.5 },
           { time: 43, variant: "grand" },
-          { time: 50, variant: "quick" },
-          { time: 52, variant: "quick" },
+          { time: 50, variant: "topBreeze", swirl: "left" },
+          { time: 52, variant: "topBreeze", swirl: "right" },
+          { time: 67, variant: "finale" },
+          { time: 67.6, variant: "finale" },
+          { time: 68.2, variant: "finale" },
+          { time: 68.8, variant: "finale" },
+          { time: 69.4, variant: "finale" },
+          { time: 70, variant: "finale" },
+          { time: 70.6, variant: "finale" },
+          { time: 71.2, variant: "finale" },
+          { time: 71.8, variant: "finale" },
+          { time: 72.4, variant: "finale" },
+          { time: 73, variant: "finale" },
+          { time: 73.6, variant: "finale" },
+          { time: 74.2, variant: "finale" },
+          { time: 74.8, variant: "finale" },
         ]}
         videoPanKeyframes={[
           { time: 0, xPercent: 50 },
@@ -632,7 +655,6 @@ export default function App() {
         </Reveal>
       </footer>
       </RevealReadyProvider>
-      </InvitationAudioProvider>
 
       {/* Background audio lives in index.html so a return visit can start it before the page finishes loading. */}
 
@@ -685,5 +707,6 @@ export default function App() {
       )}
 
     </div>
+    </InvitationAudioProvider>
   );
 }

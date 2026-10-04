@@ -4,11 +4,14 @@ import {
   useContext,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 
 type InvitationAudioContextValue = {
   setMomentVideosVisible: (visible: boolean) => void;
+  floatingPetalsHidden: boolean;
+  setFloatingPetalsSuppressed: (suppressed: boolean) => void;
 };
 
 const InvitationAudioContext = createContext<InvitationAudioContextValue | null>(
@@ -29,7 +32,18 @@ function getInvitationAudio() {
 
 export function InvitationAudioProvider({ children }: { children: ReactNode }) {
   const visibleMomentsRef = useRef(0);
+  const petalsSuppressionRef = useRef(0);
   const pausedForVideoRef = useRef(false);
+  const [floatingPetalsHidden, setFloatingPetalsHidden] = useState(false);
+
+  const setFloatingPetalsSuppressed = useCallback((suppressed: boolean) => {
+    if (suppressed) {
+      petalsSuppressionRef.current += 1;
+    } else {
+      petalsSuppressionRef.current = Math.max(0, petalsSuppressionRef.current - 1);
+    }
+    setFloatingPetalsHidden(petalsSuppressionRef.current > 0);
+  }, []);
 
   const setMomentVideosVisible = useCallback((visible: boolean) => {
     if (visible) {
@@ -54,8 +68,12 @@ export function InvitationAudioProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ setMomentVideosVisible }),
-    [setMomentVideosVisible],
+    () => ({
+      setMomentVideosVisible,
+      floatingPetalsHidden,
+      setFloatingPetalsSuppressed,
+    }),
+    [setMomentVideosVisible, floatingPetalsHidden, setFloatingPetalsSuppressed],
   );
 
   return (
