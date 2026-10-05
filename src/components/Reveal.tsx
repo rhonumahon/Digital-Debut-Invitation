@@ -25,15 +25,17 @@ export default function Reveal({
   const ready = useContext(RevealReady);
   const reduce = useReducedMotion();
 
-  if (!ready || reduce) return <div className={className}>{children}</div>;
+  if (reduce) return <div className={className}>{children}</div>;
 
+  /* Keep one motion wrapper so children (e.g. <video>) are not remounted when `ready` flips after the envelope. */
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y, x }}
-      whileInView={{ opacity: 1, y: 0, x: 0 }}
-      viewport={{ once: true, amount: 0.18 }}
-      transition={{ duration: 0.9, ease, delay }}
+      initial={ready ? { opacity: 0, y, x } : false}
+      animate={ready ? undefined : { opacity: 1, y: 0, x: 0 }}
+      whileInView={ready ? { opacity: 1, y: 0, x: 0 } : undefined}
+      viewport={ready ? { once: true, amount: 0.18 } : undefined}
+      transition={ready ? { duration: 0.9, ease, delay } : undefined}
     >
       {children}
     </motion.div>

@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { primeAllInvitationMomentVideos } from "../utils/momentVideoRegistry";
 
 type InvitationAudioContextValue = {
   setMomentVideosVisible: (visible: boolean) => void;
@@ -23,6 +24,7 @@ export const INVITATION_USER_ACTIVATED = "invitation-user-activated";
 export function notifyInvitationUserActivation() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(INVITATION_USER_ACTIVATED));
+  primeAllInvitationMomentVideos();
 }
 
 function getInvitationAudio() {

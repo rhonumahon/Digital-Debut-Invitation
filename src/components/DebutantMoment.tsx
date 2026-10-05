@@ -4,8 +4,18 @@ import Reveal from "./Reveal";
 import SectionFlourish from "./SectionFlourish";
 import {
   INVITATION_USER_ACTIVATED,
+  notifyInvitationUserActivation,
   useInvitationVideoAudio,
 } from "../contexts/InvitationAudioContext";
+import {
+  isMomentVideoActuallyPlaying,
+  playMomentVideoClip,
+  primeMomentVideo,
+} from "../utils/momentVideoPlayback";
+import {
+  hasInvitationUserActivated,
+  INVITATION_CELEBRATION_VISIBLE,
+} from "../utils/momentVideoRegistry";
 import IceCrystalVideoOverlay, {
   type IceCrystalTrigger,
 } from "./IceCrystalVideoOverlay";
@@ -141,6 +151,10 @@ export default function DebutantMoment({
   const [crystalVideoEl, setCrystalVideoEl] = useState<HTMLVideoElement | null>(
     null,
   );
+  const [playHintIndex, setPlayHintIndex] = useState<Record<number, true>>({});
+  const playClipRef = useRef<(el: HTMLVideoElement) => Promise<void>>(
+    async () => {},
+  );
   const { setMomentVideosVisible, setFloatingPetalsSuppressed } =
     useInvitationVideoAudio();
 
@@ -161,18 +175,41 @@ export default function DebutantMoment({
       }
     };
 
+    const videoIndex = (el: HTMLVideoElement) => {
+      const raw = el.dataset.momentVideoIndex;
+      if (raw === undefined) return -1;
+      const idx = Number(raw);
+      return Number.isFinite(idx) ? idx : -1;
+    };
+
+    const setPlayHint = (el: HTMLVideoElement, show: boolean) => {
+      const idx = videoIndex(el);
+      if (idx < 0) return;
+      setPlayHintIndex((prev) => {
+        if (show) {
+          if (prev[idx]) return prev;
+          return { ...prev, [idx]: true };
+        }
+        if (!prev[idx]) return prev;
+        const next = { ...prev };
+        delete next[idx];
+        return next;
+      });
+    };
+
     const playClip = async (el: HTMLVideoElement) => {
-      el.muted = true;
-      try {
-        await el.play();
-        if (!videoSound) return;
-        el.muted = false;
-        await el.play();
-      } catch {
-        el.muted = true;
-        await el.play().catch(() => {});
+      await playMomentVideoClip(el, videoSound);
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
+      if (isMomentVideoActuallyPlaying(el)) {
+        setPlayHint(el, false);
+        return;
+      }
+      if (clipInView.get(el) ?? false) {
+        setPlayHint(el, true);
       }
     };
+
+    playClipRef.current = playClip;
 
     const unmutePlayingClips = () => {
       if (!videoSound) return;
@@ -183,38 +220,143 @@ export default function DebutantMoment({
       });
     };
 
+    const retryInViewClips = () => {
+      clips.forEach((el) => {
+        if ((clipInView.get(el) ?? false) && el.paused) {
+          void playClip(el);
+        }
+      });
+    };
+
+    const onUserActivated = () => {
+      clips.forEach((el) => {
+        void primeMomentVideo(el);
+      });
+      unmutePlayingClips();
+      retryInViewClips();
+    };
+
     const clips = Array.from(root.querySelectorAll("video"));
     const clipInView = new WeakMap<HTMLVideoElement, boolean>();
+
+    const isMostlyInView = (el: Element) => {
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      const visible = Math.min(rect.bottom, vh) - Math.max(rect.top, 0);
+      if (visible <= 0 || rect.height <= 0) return false;
+      return visible / rect.height >= 0.12;
+    };
+
+    const setInView = (el: HTMLVideoElement, inView: boolean) => {
+      const wasInView = clipInView.get(el) ?? false;
+      if (wasInView === inView) return;
+      clipInView.set(el, inView);
+      el.dataset.inView = inView ? "true" : "false";
+      if (inView) {
+        syncMomentVisibility(1);
+        void playClip(el);
+      } else {
+        el.pause();
+        el.muted = true;
+        setPlayHint(el, false);
+        syncMomentVisibility(-1);
+      }
+    };
+
+    const onMediaReady = (event: Event) => {
+      const el = event.target;
+      if (!(el instanceof HTMLVideoElement) || !root.contains(el)) return;
+      if ((clipInView.get(el) ?? false) && el.paused) {
+        void playClip(el);
+        return;
+      }
+      if (!clipInView.get(el)) {
+        void primeMomentVideo(el);
+      }
+    };
+
+    root.addEventListener("canplay", onMediaReady);
+    root.addEventListener("loadeddata", onMediaReady);
+
+    const stallTimers = new Map<HTMLVideoElement, number>();
+    const scheduleStallCheck = (el: HTMLVideoElement) => {
+      const prev = stallTimers.get(el);
+      if (prev) window.clearTimeout(prev);
+      stallTimers.set(
+        el,
+        window.setTimeout(() => {
+          if ((clipInView.get(el) ?? false) && !isMomentVideoActuallyPlaying(el)) {
+            setPlayHint(el, true);
+          }
+        }, 900),
+      );
+    };
+
+    const setInViewWithStall = (el: HTMLVideoElement, inView: boolean) => {
+      setInView(el, inView);
+      if (inView) scheduleStallCheck(el);
+      else {
+        const t = stallTimers.get(el);
+        if (t) window.clearTimeout(t);
+        stallTimers.delete(el);
+      }
+    };
+
     const observers = clips.map((el) => {
       const observer = new IntersectionObserver(
         ([entry]) => {
-          const wasInView = clipInView.get(el) ?? false;
-          const inView = entry.isIntersecting;
-          if (wasInView === inView) return;
-          clipInView.set(el, inView);
-          if (inView) {
-            syncMomentVisibility(1);
-            void playClip(el);
-          } else {
-            el.pause();
-            el.muted = true;
-            syncMomentVisibility(-1);
-          }
+          setInViewWithStall(el, entry.isIntersecting);
         },
-        { threshold: 0.35 },
+        { threshold: 0.08, rootMargin: "80px 0px" },
       );
       observer.observe(el);
       return observer;
     });
 
-    window.addEventListener(INVITATION_USER_ACTIVATED, unmutePlayingClips);
+    const bootstrapClips = () => {
+      clips.forEach((el) => {
+        if (isMostlyInView(el)) {
+          setInViewWithStall(el, true);
+        } else if (hasInvitationUserActivated()) {
+          void primeMomentVideo(el);
+        }
+      });
+    };
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(bootstrapClips);
+    });
+    window.setTimeout(bootstrapClips, 500);
+
+    if (hasInvitationUserActivated()) {
+      onUserActivated();
+    }
+
+    const onCelebrationVisible = () => {
+      onUserActivated();
+      bootstrapClips();
+    };
+
+    window.addEventListener(INVITATION_USER_ACTIVATED, onUserActivated);
+    window.addEventListener(INVITATION_CELEBRATION_VISIBLE, onCelebrationVisible);
+    document.addEventListener("visibilitychange", retryInViewClips);
+
     return () => {
-      window.removeEventListener(INVITATION_USER_ACTIVATED, unmutePlayingClips);
+      window.removeEventListener(INVITATION_USER_ACTIVATED, onUserActivated);
+      window.removeEventListener(
+        INVITATION_CELEBRATION_VISIBLE,
+        onCelebrationVisible,
+      );
+      document.removeEventListener("visibilitychange", retryInViewClips);
+      root.removeEventListener("canplay", onMediaReady);
+      root.removeEventListener("loadeddata", onMediaReady);
       if (visibleClips > 0) {
         setMomentVideosVisible(false);
         if (hideGlobalPetalsWhileInView) setFloatingPetalsSuppressed(false);
       }
       observers.forEach((observer) => observer.disconnect());
+      stallTimers.forEach((id) => window.clearTimeout(id));
+      stallTimers.clear();
     };
   }, [
     hasVideo,
@@ -224,6 +366,37 @@ export default function DebutantMoment({
     setFloatingPetalsSuppressed,
     videoSources.join("|"),
   ]);
+
+  const onPlayHintClick = (el: HTMLVideoElement) => {
+    notifyInvitationUserActivation();
+    const idx = Number(el.dataset.momentVideoIndex);
+    void (async () => {
+      el.muted = true;
+      try {
+        await el.play();
+        if (videoSound) {
+          el.muted = false;
+          try {
+            await el.play();
+          } catch {
+            el.muted = true;
+            await el.play();
+          }
+        }
+      } catch {
+        await playClipRef.current(el);
+        return;
+      }
+      if (Number.isFinite(idx)) {
+        setPlayHintIndex((prev) => {
+          if (!prev[idx]) return prev;
+          const next = { ...prev };
+          delete next[idx];
+          return next;
+        });
+      }
+    })();
+  };
 
   const panKey =
     videoPanKeyframes
@@ -413,6 +586,7 @@ export default function DebutantMoment({
                 >
                   <video
                     ref={index === 0 ? setCrystalVideoEl : undefined}
+                    data-moment-video-index={index}
                     src={src}
                     poster={index === 0 ? image : undefined}
                     aria-label={alt}
@@ -423,8 +597,37 @@ export default function DebutantMoment({
                     preload="auto"
                     disablePictureInPicture
                     disableRemotePlayback
-                    onPlaying={(e) => e.currentTarget.removeAttribute("poster")}
+                    onPlaying={(e) => {
+                      e.currentTarget.removeAttribute("poster");
+                      setPlayHintIndex((prev) => {
+                        if (!prev[index]) return prev;
+                        const next = { ...prev };
+                        delete next[index];
+                        return next;
+                      });
+                    }}
                   />
+                  {playHintIndex[index] ? (
+                    <button
+                      type="button"
+                      className="debutant-moment-video-play-hint"
+                      aria-label="Play video"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        const videoEl = event.currentTarget.previousElementSibling;
+                        if (videoEl instanceof HTMLVideoElement) {
+                          onPlayHintClick(videoEl);
+                        }
+                      }}
+                    >
+                      <span className="debutant-moment-video-play-hint__icon" aria-hidden>
+                        ▶
+                      </span>
+                      <span className="debutant-moment-video-play-hint__label">
+                        Tap to play video
+                      </span>
+                    </button>
+                  ) : null}
                   {index === 0 && videoCrystalMoments?.length ? (
                     <CrystalTransformOverlay
                       video={crystalVideoEl}

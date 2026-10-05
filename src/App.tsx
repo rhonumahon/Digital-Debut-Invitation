@@ -4,6 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { Share2, Mail, Heart } from "lucide-react";
 import HeroBanner, { GOWN_CHANGE_AT } from "./components/HeroBanner";
 import EventCountdown from "./components/EventCountdown"; // Imported the new component
@@ -26,6 +27,10 @@ import {
   InvitationAudioProvider,
   notifyInvitationUserActivation,
 } from "./contexts/InvitationAudioContext";
+import {
+  notifyInvitationCelebrationVisible,
+  startInvitationMomentVideoPreload,
+} from "./utils/momentVideoRegistry";
 
 const INTRO_MUSIC = "/assets/intro.mp3";
 const FINALE_MUSIC = "/assets/last20sec.mp3";
@@ -194,8 +199,18 @@ export default function App() {
     rememberGuest(nextGuestId);
     setGuestId(nextGuestId);
     setPromptOpen(true);
-    setShowEnvelope(false);
+    flushSync(() => {
+      setShowEnvelope(false);
+    });
+    notifyInvitationUserActivation();
+    notifyInvitationCelebrationVisible();
   };
+
+  useEffect(() => {
+    if (showEnvelope) return;
+    startInvitationMomentVideoPreload();
+    notifyInvitationCelebrationVisible();
+  }, [showEnvelope]);
 
   const returnToEnvelope = () => {
     clearGuestSession();
