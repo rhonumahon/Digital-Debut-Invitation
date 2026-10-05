@@ -512,11 +512,7 @@ export default function App() {
         videoSound
         compactVideo
         hideGlobalPetalsWhileInView
-        videoEdgeBeams={{
-          start: 0,
-          end: 46,
-          frameImage: "/assets/images/elsa-ice-frame-shards.jpg",
-        }}
+        videoEdgeBeams={{ start: 0, end: 53, dimFrom: 46 }}
         violetShardAt={[{ time: 13 }, { time: 20 }]}
         videoCrystalMoments={[
           {
@@ -525,7 +521,7 @@ export default function App() {
             style: "side",
             glitterBurst: { start: 46, end: 47.75 },
           },
-          { start: 66, end: 73.5, style: "finale" },
+          { start: 67, end: 74.5, style: "finale" },
         ]}
         risingIceCrystals={[
           {
@@ -579,8 +575,8 @@ export default function App() {
           { time: 35, xPercent: 67, scale: 1.14 },
           { time: 40, xPercent: 50, scale: 1.12 },
           { time: 63, xPercent: 60, scale: 1.62 },
-          { time: 65.9, xPercent: 60, scale: 1.62 },
-          { time: 66, xPercent: 58, scale: 1, ease: "linear" },
+          { time: 66.9, xPercent: 60, scale: 1.62 },
+          { time: 67, xPercent: 58, scale: 1, ease: "linear" },
         ]}
         alt="Jaylyn Eirielle as Elsa in a senior high stage play of Frozen"
         kicker="In senior high"
