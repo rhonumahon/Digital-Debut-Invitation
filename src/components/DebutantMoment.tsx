@@ -21,6 +21,7 @@ import IceCrystalVideoOverlay, {
 } from "./IceCrystalVideoOverlay";
 import RisingIceCrystalsOverlay, {
   type RisingIceCrystalsWindow,
+  type RisingSyncBackdropReplacement,
 } from "./RisingIceCrystalsOverlay";
 import VideoEdgeBeamsOverlay, {
   type VideoEdgeBeamWindow,
@@ -112,6 +113,8 @@ type DebutantMomentProps = {
   iceCrystalAt?: IceCrystalTrigger[];
   /** Sustained rising shiny ice crystals between start and end (clip seconds). */
   risingIceCrystals?: RisingIceCrystalsWindow | RisingIceCrystalsWindow[];
+  /** Full backdrop swap (e.g. top-down reveal at 0:27). */
+  risingSyncBackdropReplacement?: RisingSyncBackdropReplacement;
   /** Ice/crystal color wash on the video between start and end (clip seconds). */
   videoCrystalMoments?: CrystalMoment[];
   /** Steady dark-blue light beams along the top and bottom (clip seconds). */
@@ -140,6 +143,7 @@ export default function DebutantMoment({
   videoPanKeyframes,
   iceCrystalAt,
   risingIceCrystals,
+  risingSyncBackdropReplacement,
   videoCrystalMoments,
   videoEdgeBeams,
   violetShardAt,
@@ -592,13 +596,21 @@ export default function DebutantMoment({
                     aria-label={alt}
                     className={`debutant-moment-video w-full object-cover bg-[#07182e] ${frame}`}
                     playsInline
-                    muted
+                    defaultMuted
                     loop
                     preload="auto"
                     disablePictureInPicture
                     disableRemotePlayback
                     onPlaying={(e) => {
-                      e.currentTarget.removeAttribute("poster");
+                      const video = e.currentTarget;
+                      video.removeAttribute("poster");
+                      if (
+                        videoSound &&
+                        hasInvitationUserActivated() &&
+                        video.muted
+                      ) {
+                        video.muted = false;
+                      }
                       setPlayHintIndex((prev) => {
                         if (!prev[index]) return prev;
                         const next = { ...prev };
@@ -644,6 +656,7 @@ export default function DebutantMoment({
                     <RisingIceCrystalsOverlay
                       video={crystalVideoEl}
                       windows={risingIceCrystals}
+                      syncBackdropReplacement={risingSyncBackdropReplacement}
                     />
                   ) : null}
                   {index === 0 && videoEdgeBeams ? (
