@@ -268,6 +268,119 @@ html {
   contain: layout style paint;
 }
 
+.video-edge-beams {
+  contain: layout style paint;
+}
+
+.violet-shard-burst {
+  contain: layout style paint;
+}
+
+.video-edge-beam-ice-facet {
+  background-image:
+    repeating-linear-gradient(
+      108deg,
+      transparent 0 9px,
+      rgba(255, 255, 255, 0.05) 9px 10px
+    ),
+    repeating-linear-gradient(
+      -16deg,
+      transparent 0 18px,
+      rgba(186, 230, 253, 0.07) 18px 19px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 42px,
+      rgba(255, 255, 255, 0.035) 42px 43px
+    );
+  mix-blend-mode: screen;
+  opacity: 0.85;
+}
+
+.video-edge-beam-frost-top {
+  background:
+    radial-gradient(
+      ellipse 85% 70% at 18% 0%,
+      rgba(255, 255, 255, 0.14),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 75% 65% at 82% 0%,
+      rgba(186, 230, 253, 0.16),
+      transparent 55%
+    ),
+    conic-gradient(
+      from 160deg at 50% 0%,
+      transparent,
+      rgba(255, 255, 255, 0.07),
+      transparent 55%
+    );
+  mix-blend-mode: soft-light;
+  opacity: 0.7;
+}
+
+.video-edge-beam-frost-bottom {
+  background:
+    radial-gradient(
+      ellipse 85% 70% at 18% 100%,
+      rgba(255, 255, 255, 0.14),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 75% 65% at 82% 100%,
+      rgba(186, 230, 253, 0.16),
+      transparent 55%
+    ),
+    conic-gradient(
+      from 200deg at 50% 100%,
+      transparent,
+      rgba(255, 255, 255, 0.07),
+      transparent 55%
+    );
+  mix-blend-mode: soft-light;
+  opacity: 0.7;
+}
+
+.video-edge-beam-glass-reflect {
+  background: linear-gradient(
+    102deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 32%,
+    rgba(224, 242, 254, 0.24) 46%,
+    rgba(255, 255, 255, 0.11) 58%,
+    transparent 74%
+  );
+  background-size: 200% 100%;
+  mix-blend-mode: overlay;
+  animation: edge-beam-glass-sweep 11s ease-in-out infinite;
+}
+
+.video-edge-beam-glass-reflect-alt {
+  background: linear-gradient(
+    78deg,
+    transparent 10%,
+    rgba(186, 230, 253, 0.12) 40%,
+    rgba(255, 255, 255, 0.18) 50%,
+    rgba(147, 197, 253, 0.1) 62%,
+    transparent 88%
+  );
+  background-size: 220% 100%;
+  mix-blend-mode: soft-light;
+  animation: edge-beam-glass-sweep 14s ease-in-out infinite reverse;
+  opacity: 0.75;
+}
+
+@keyframes edge-beam-glass-sweep {
+  0%,
+  100% {
+    background-position: 130% 0;
+  }
+  48%,
+  52% {
+    background-position: -30% 0;
+  }
+}
+
 @keyframes crystal-edge-breathe {
   0%,
   100% {

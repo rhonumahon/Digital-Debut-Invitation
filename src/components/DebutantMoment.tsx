@@ -12,6 +12,12 @@ import IceCrystalVideoOverlay, {
 import RisingIceCrystalsOverlay, {
   type RisingIceCrystalsWindow,
 } from "./RisingIceCrystalsOverlay";
+import VideoEdgeBeamsOverlay, {
+  type VideoEdgeBeamWindow,
+} from "./VideoEdgeBeamsOverlay";
+import VioletShardBurstOverlay, {
+  type VioletShardTrigger,
+} from "./VioletShardBurstOverlay";
 import CrystalTransformOverlay, {
   type CrystalMoment,
 } from "./CrystalTransformOverlay";
@@ -98,6 +104,9 @@ type DebutantMomentProps = {
   risingIceCrystals?: RisingIceCrystalsWindow | RisingIceCrystalsWindow[];
   /** Ice/crystal color wash on the video between start and end (clip seconds). */
   videoCrystalMoments?: CrystalMoment[];
+  /** Steady dark-blue light beams along the top and bottom (clip seconds). */
+  videoEdgeBeams?: VideoEdgeBeamWindow;
+  violetShardAt?: VioletShardTrigger[];
   /** Hide site-wide falling petals while this block’s video is on screen. */
   hideGlobalPetalsWhileInView?: boolean;
 };
@@ -122,6 +131,8 @@ export default function DebutantMoment({
   iceCrystalAt,
   risingIceCrystals,
   videoCrystalMoments,
+  videoEdgeBeams,
+  violetShardAt,
   hideGlobalPetalsWhileInView = false,
 }: DebutantMomentProps) {
   const videoSources = videos?.length ? videos : video ? [video] : [];
@@ -430,6 +441,18 @@ export default function DebutantMoment({
                     <RisingIceCrystalsOverlay
                       video={crystalVideoEl}
                       windows={risingIceCrystals}
+                    />
+                  ) : null}
+                  {index === 0 && videoEdgeBeams ? (
+                    <VideoEdgeBeamsOverlay
+                      video={crystalVideoEl}
+                      window={videoEdgeBeams}
+                    />
+                  ) : null}
+                  {index === 0 && violetShardAt?.length ? (
+                    <VioletShardBurstOverlay
+                      video={crystalVideoEl}
+                      triggers={violetShardAt}
                     />
                   ) : null}
                 </div>
