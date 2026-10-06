@@ -578,6 +578,7 @@ export default function App() {
         video="/assets/debutant-elsa.mp4"
         videoSound
         compactVideo
+        videoEnhance="subtle"
         hideGlobalPetalsWhileInView
         videoTimedBackdrop={{
           start: 0,

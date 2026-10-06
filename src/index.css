@@ -287,12 +287,41 @@ html {
   line-height: 1;
   padding-left: 0.15rem;
 }
+[data-video-pan-shell] {
+  contain: layout style paint;
+}
+
+.debutant-moment-video-pan-inner {
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+  /* Sized in JS to full object-cover dimensions (wider/taller than the clip). */
+}
+
 .debutant-moment-video--pan {
+  object-position: 50% 50%;
   transform: translateZ(0);
 }
 
+/* Cosmetic only — source is 720p; swap the MP4 for true HD. */
+.debutant-moment-video-enhance--subtle {
+  filter: contrast(1.07) saturate(1.12) brightness(1.04);
+}
+
+.debutant-moment-video-enhance--vivid {
+  filter: contrast(1.11) saturate(1.2) brightness(1.06);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .debutant-moment-video-enhance--subtle,
+  .debutant-moment-video-enhance--vivid {
+    filter: none;
+  }
+}
+
 .video-pan-sync-backdrop {
-  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .crystal-edge-overlay {

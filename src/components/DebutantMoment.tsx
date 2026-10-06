@@ -40,9 +40,14 @@ import IcePalaceDoorCloseOverlay, {
 } from "./IcePalaceDoorCloseOverlay";
 import {
   estimatedVideoPlaybackTime,
+  resyncVideoPlaybackClockIfMediaAdvanced,
   syncVideoPlaybackClock,
   type VideoPlaybackClock,
 } from "../utils/videoPlaybackTime";
+import {
+  backdropZoomTransformStyle,
+  panLayerLayoutStyle,
+} from "../utils/videoObjectCoverPan";
 
 type Slide = {
   src: string;
@@ -70,7 +75,7 @@ function easeInOutSine(t: number): number {
 
 function panStateAtTime(t: number, keyframes: VideoPanKeyframe[]): PanState {
   if (!keyframes.length) return { x: 50, y: 50, scale: 1 };
-  const sorted = keyframes;
+  const sorted = [...keyframes].sort((a, b) => a.time - b.time);
   const pick = (k: VideoPanKeyframe): PanState => ({
     x: k.xPercent,
     y: k.yPercent ?? 50,
@@ -132,6 +137,11 @@ type DebutantMomentProps = {
   icePalaceDoorClose?: IcePalaceDoorCloseConfig;
   /** Hide site-wide falling petals while this block’s video is on screen. */
   hideGlobalPetalsWhileInView?: boolean;
+  /**
+   * Light CSS polish (contrast/saturation). Cannot add pixels beyond the source file;
+   * use a higher-quality re-encode for real HD.
+   */
+  videoEnhance?: "off" | "subtle" | "vivid";
 };
 
 export default function DebutantMoment({
@@ -160,6 +170,7 @@ export default function DebutantMoment({
   violetShardAt,
   icePalaceDoorClose,
   hideGlobalPetalsWhileInView = false,
+  videoEnhance = "off",
 }: DebutantMomentProps) {
   const videoSources = videos?.length ? videos : video ? [video] : [];
   const hasVideo = videoSources.length > 0;
@@ -425,22 +436,72 @@ export default function DebutantMoment({
 
     const clocks = new WeakMap<HTMLVideoElement, VideoPlaybackClock>();
     const stopHandles = new WeakMap<HTMLVideoElement, () => void>();
+    const coverBoxCache = new WeakMap<
+      HTMLVideoElement,
+      { cw: number; ch: number; vw: number; vh: number; rw: number; rh: number }
+    >();
+    const lastPanTransform = new WeakMap<HTMLElement, string>();
+
+    const panShellFor = (el: HTMLVideoElement) =>
+      el.closest("[data-video-pan-shell]") as HTMLElement | null;
+
+    const panLayerFor = (el: HTMLVideoElement) =>
+      el.closest("[data-video-pan-layer]") as HTMLElement | null;
 
     const applyPan = (el: HTMLVideoElement) => {
       const clock = clocks.get(el);
       if (clock && el.currentTime + 0.35 < clock.media) {
         syncVideoPlaybackClock(el, clocks);
       }
+      resyncVideoPlaybackClockIfMediaAdvanced(el, clocks);
       const t = estimatedVideoPlaybackTime(el, clocks.get(el));
       const { x, y, scale } = panStateAtTime(t, videoPanKeyframes);
-      const origin = `${x}% ${y}%`;
-      const zoom = scale > 1.001 ? `scale(${scale})` : "";
 
-      el.style.objectPosition = `${x}% ${y}%`;
-      el.style.transformOrigin = origin;
-      el.style.transform = zoom;
+      const shell = panShellFor(el);
+      const panLayer = panLayerFor(el);
+      const cw = shell?.clientWidth ?? el.clientWidth;
+      const ch = shell?.clientHeight ?? el.clientHeight;
+      const vw = el.videoWidth || 1280;
+      const vh = el.videoHeight || 720;
 
-      const shell = el.parentElement;
+      if (panLayer && cw > 0 && ch > 0) {
+        let box = coverBoxCache.get(el);
+        if (
+          !box ||
+          box.cw !== cw ||
+          box.ch !== ch ||
+          box.vw !== vw ||
+          box.vh !== vh
+        ) {
+          const layoutProbe = panLayerLayoutStyle(
+            { xPercent: 50, yPercent: 50, scale: 1 },
+            cw,
+            ch,
+            vw,
+            vh,
+          );
+          const rw = Number.parseFloat(layoutProbe.width);
+          const rh = Number.parseFloat(layoutProbe.height);
+          box = { cw, ch, vw, vh, rw, rh };
+          coverBoxCache.set(el, box);
+          panLayer.style.width = layoutProbe.width;
+          panLayer.style.height = layoutProbe.height;
+        }
+
+        const layout = panLayerLayoutStyle(
+          { xPercent: x, yPercent: y, scale },
+          cw,
+          ch,
+          vw,
+          vh,
+        );
+        if (lastPanTransform.get(panLayer) !== layout.transform) {
+          panLayer.style.transformOrigin = layout.transformOrigin;
+          panLayer.style.transform = layout.transform;
+          lastPanTransform.set(panLayer, layout.transform);
+        }
+      }
+
       const syncBackdropPan = t <= 75;
       shell
         ?.querySelectorAll<HTMLElement>(".video-pan-sync-backdrop")
@@ -450,8 +511,13 @@ export default function DebutantMoment({
             layer.style.transformOrigin = "";
             return;
           }
-          layer.style.transformOrigin = origin;
-          layer.style.transform = zoom;
+          const zoom = backdropZoomTransformStyle({
+            xPercent: x,
+            yPercent: y,
+            scale,
+          });
+          layer.style.transformOrigin = zoom.transformOrigin;
+          layer.style.transform = zoom.transform;
         });
     };
 
@@ -459,7 +525,16 @@ export default function DebutantMoment({
       el.style.objectPosition = "";
       el.style.transform = "";
       el.style.transformOrigin = "";
-      el.parentElement
+      const panLayer = panLayerFor(el);
+      if (panLayer) {
+        panLayer.style.width = "";
+        panLayer.style.height = "";
+        panLayer.style.transform = "";
+        panLayer.style.transformOrigin = "";
+        lastPanTransform.delete(panLayer);
+      }
+      coverBoxCache.delete(el);
+      panShellFor(el)
         ?.querySelectorAll<HTMLElement>(".video-pan-sync-backdrop")
         .forEach((layer) => {
           layer.style.transform = "";
@@ -476,48 +551,47 @@ export default function DebutantMoment({
       stopPanLoop(el);
       syncVideoPlaybackClock(el, clocks);
 
+      let rafId = 0;
+      let running = true;
+
       type VideoWithRvfc = HTMLVideoElement & {
-        requestVideoFrameCallback?: (cb: (now: DOMHighResTimeStamp, meta: VideoFrameCallbackMetadata) => void) => number;
+        requestVideoFrameCallback?: (
+          cb: (
+            now: DOMHighResTimeStamp,
+            meta: VideoFrameCallbackMetadata,
+          ) => void,
+        ) => number;
         cancelVideoFrameCallback?: (handle: number) => void;
       };
 
-      let rafId = 0;
       let rvfcId = 0;
-      let running = true;
+      const videoRvfc = el as VideoWithRvfc;
 
-      const tick = () => {
-        if (!running) return;
-        applyPan(el);
-      };
-
-      const loopRvfc = () => {
-        const video = el as VideoWithRvfc;
-        if (!video.requestVideoFrameCallback) {
-          const frame = () => {
-            if (!running || el.paused) return;
-            syncVideoPlaybackClock(el, clocks);
-            tick();
-            rafId = requestAnimationFrame(frame);
-          };
-          rafId = requestAnimationFrame(frame);
+      const scheduleRvfc = () => {
+        if (!running || el.paused || !videoRvfc.requestVideoFrameCallback) {
           return;
         }
-        rvfcId = video.requestVideoFrameCallback(() => {
+        rvfcId = videoRvfc.requestVideoFrameCallback(() => {
           if (!running) return;
           syncVideoPlaybackClock(el, clocks);
-          tick();
-          if (!el.paused) loopRvfc();
+          if (!el.paused) scheduleRvfc();
         });
       };
 
-      loopRvfc();
+      const frame = () => {
+        if (!running || el.paused) return;
+        applyPan(el);
+        rafId = requestAnimationFrame(frame);
+      };
+
+      rafId = requestAnimationFrame(frame);
+      scheduleRvfc();
 
       stopHandles.set(el, () => {
         running = false;
         cancelAnimationFrame(rafId);
-        const video = el as VideoWithRvfc;
-        if (rvfcId && video.cancelVideoFrameCallback) {
-          video.cancelVideoFrameCallback(rvfcId);
+        if (rvfcId && videoRvfc.cancelVideoFrameCallback) {
+          videoRvfc.cancelVideoFrameCallback(rvfcId);
         }
       });
     };
@@ -544,20 +618,38 @@ export default function DebutantMoment({
       }
     };
 
+    const onResize = () => {
+      clips.forEach((el) => applyPan(el));
+    };
+
     const clips = Array.from(root.querySelectorAll("video"));
+    const resizeObservers: ResizeObserver[] = [];
+
     clips.forEach((el) => {
       el.classList.add("debutant-moment-video--pan");
+      el.style.objectPosition = "50% 50%";
+      el.style.transform = "none";
+      el.style.transformOrigin = "";
       syncVideoPlaybackClock(el, clocks);
       applyPan(el);
       el.addEventListener("play", onPlay);
       el.addEventListener("pause", onPause);
       el.addEventListener("ended", onLoopPoint);
       el.addEventListener("seeked", onLoopPoint);
+      el.addEventListener("loadedmetadata", onLoopPoint);
       el.addEventListener("timeupdate", () => syncVideoPlaybackClock(el, clocks));
       if (!el.paused) startPanLoop(el);
+
+      const shell = panShellFor(el);
+      if (shell && typeof ResizeObserver !== "undefined") {
+        const ro = new ResizeObserver(onResize);
+        ro.observe(shell);
+        resizeObservers.push(ro);
+      }
     });
 
     return () => {
+      resizeObservers.forEach((ro) => ro.disconnect());
       clips.forEach((el) => {
         stopPanLoop(el);
         el.classList.remove("debutant-moment-video--pan");
@@ -565,6 +657,7 @@ export default function DebutantMoment({
         el.removeEventListener("pause", onPause);
         el.removeEventListener("ended", onLoopPoint);
         el.removeEventListener("seeked", onLoopPoint);
+        el.removeEventListener("loadedmetadata", onLoopPoint);
         clearPan(el);
       });
     };
@@ -577,6 +670,12 @@ export default function DebutantMoment({
     : "max-w-4xl md:grid-cols-2";
 
   const panVideo = Boolean(videoPanKeyframes?.length);
+  const videoEnhanceClass =
+    videoEnhance === "vivid"
+      ? "debutant-moment-video-enhance--vivid"
+      : videoEnhance === "subtle"
+        ? "debutant-moment-video-enhance--subtle"
+        : "";
   const videoFrame = compactVideo
     ? `aspect-[9/14.4] object-cover${panVideo ? "" : " object-center"}`
     : `aspect-[9/16] object-cover${panVideo ? "" : " object-center"}`;
@@ -619,6 +718,7 @@ export default function DebutantMoment({
             ? videoSources.map((src, index) => (
                 <div
                   key={src}
+                  data-video-pan-shell={panVideo ? "" : undefined}
                   className={`relative w-full overflow-hidden ${frame} ${
                     slides?.length && index === 0
                       ? "border-t border-[#f09060]/35"
@@ -627,37 +727,76 @@ export default function DebutantMoment({
                         : ""
                   }`}
                 >
-                  <video
-                    ref={index === 0 ? setCrystalVideoEl : undefined}
-                    data-moment-video-index={index}
-                    src={src}
-                    poster={index === 0 ? image : undefined}
-                    aria-label={alt}
-                    className={`debutant-moment-video absolute inset-0 h-full w-full bg-[#07182e] object-cover${panVideo ? "" : " object-center"}`}
-                    playsInline
-                    defaultMuted
-                    loop
-                    preload="auto"
-                    disablePictureInPicture
-                    disableRemotePlayback
-                    onPlaying={(e) => {
-                      const video = e.currentTarget;
-                      video.removeAttribute("poster");
-                      if (
-                        videoSound &&
-                        hasInvitationUserActivated() &&
-                        video.muted
-                      ) {
-                        video.muted = false;
-                      }
-                      setPlayHintIndex((prev) => {
-                        if (!prev[index]) return prev;
-                        const next = { ...prev };
-                        delete next[index];
-                        return next;
-                      });
-                    }}
-                  />
+                  {panVideo ? (
+                    <div
+                      data-video-pan-layer
+                      className={`debutant-moment-video-pan-inner absolute left-0 top-0 ${videoEnhanceClass}`.trim()}
+                    >
+                      <video
+                        ref={index === 0 ? setCrystalVideoEl : undefined}
+                        data-moment-video-index={index}
+                        src={src}
+                        poster={index === 0 ? image : undefined}
+                        aria-label={alt}
+                        className="debutant-moment-video debutant-moment-video--pan absolute inset-0 h-full w-full bg-[#07182e] object-cover object-center"
+                        playsInline
+                        defaultMuted
+                        loop
+                        preload="auto"
+                        disablePictureInPicture
+                        disableRemotePlayback
+                        onPlaying={(e) => {
+                          const video = e.currentTarget;
+                          video.removeAttribute("poster");
+                          if (
+                            videoSound &&
+                            hasInvitationUserActivated() &&
+                            video.muted
+                          ) {
+                            video.muted = false;
+                          }
+                          setPlayHintIndex((prev) => {
+                            if (!prev[index]) return prev;
+                            const next = { ...prev };
+                            delete next[index];
+                            return next;
+                          });
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <video
+                      ref={index === 0 ? setCrystalVideoEl : undefined}
+                      data-moment-video-index={index}
+                      src={src}
+                      poster={index === 0 ? image : undefined}
+                      aria-label={alt}
+                      className={`debutant-moment-video absolute inset-0 h-full w-full bg-[#07182e] object-cover object-center ${videoEnhanceClass}`.trim()}
+                      playsInline
+                      defaultMuted
+                      loop
+                      preload="auto"
+                      disablePictureInPicture
+                      disableRemotePlayback
+                      onPlaying={(e) => {
+                        const video = e.currentTarget;
+                        video.removeAttribute("poster");
+                        if (
+                          videoSound &&
+                          hasInvitationUserActivated() &&
+                          video.muted
+                        ) {
+                          video.muted = false;
+                        }
+                        setPlayHintIndex((prev) => {
+                          if (!prev[index]) return prev;
+                          const next = { ...prev };
+                          delete next[index];
+                          return next;
+                        });
+                      }}
+                    />
+                  )}
                   {playHintIndex[index] ? (
                     <button
                       type="button"
@@ -665,7 +804,8 @@ export default function DebutantMoment({
                       aria-label="Play video"
                       onClick={(event) => {
                         event.stopPropagation();
-                        const videoEl = event.currentTarget.previousElementSibling;
+                        const host = event.currentTarget.parentElement;
+                        const videoEl = host?.querySelector("video.debutant-moment-video");
                         if (videoEl instanceof HTMLVideoElement) {
                           onPlayHintClick(videoEl);
                         }
