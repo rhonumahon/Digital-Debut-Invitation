@@ -21,6 +21,10 @@ import EnvelopeExperience from "./components/EnvelopeExperience";
 import GentleNoteCard from "./components/GentleNoteCard";
 import GiftCard from "./components/GiftCard";
 import DebutantMoment from "./components/DebutantMoment";
+import {
+  syncBackdropOpeningRevealCompleteAt,
+  type RisingIceCrystalsWindow,
+} from "./components/RisingIceCrystalsOverlay";
 import SectionFlourish from "./components/SectionFlourish";
 import Reveal, { RevealReadyProvider } from "./components/Reveal";
 import {
@@ -35,6 +39,54 @@ import {
 const INTRO_MUSIC = "/assets/intro.mp3";
 const FINALE_MUSIC = "/assets/last20sec.mp3";
 const FINALE_LEAD_MS = 20_000;
+
+const SYNC_BACKDROP_STRENGTH = 0.68;
+
+const DEBUT_RISING_ICE_WINDOWS: RisingIceCrystalsWindow[] = [
+  {
+    start: 6,
+    end: 10,
+    backgroundImage: "/assets/images/elsa-ice-palace-vertical.png",
+    syncBackdropImage: "/assets/images/elsa-rising-sync-backdrop.png?v=8",
+    syncBackdropStrength: SYNC_BACKDROP_STRENGTH,
+    syncBackdropHoldUntil: 27,
+  },
+  {
+    start: 17.5,
+    end: 20,
+    backgroundImage: "/assets/images/elsa-ice-palace-vertical.png",
+    sliceSide: "right",
+    syncBackdropImage: "/assets/images/elsa-rising-sync-backdrop.png?v=8",
+    syncBackdropStrength: SYNC_BACKDROP_STRENGTH,
+    syncBackdropHoldUntil: 27,
+  },
+  {
+    start: 18,
+    end: 20.2,
+    backgroundImage: "/assets/images/elsa-ice-palace-vertical.png",
+    sliceIndices: [5],
+    sliceRiseDelay: 0.18,
+    syncBackdropImage: "/assets/images/elsa-rising-sync-backdrop.png?v=8",
+    syncBackdropStrength: SYNC_BACKDROP_STRENGTH,
+    syncBackdropHoldUntil: 27,
+  },
+  {
+    start: 20.5,
+    end: 22,
+    backgroundImage: "/assets/images/elsa-ice-palace-vertical.png",
+    syncBackdropImage: "/assets/images/elsa-rising-sync-backdrop.png?v=8",
+    syncBackdropStrength: SYNC_BACKDROP_STRENGTH,
+    syncBackdropHoldUntil: 27,
+  },
+];
+
+/** Matches `public/assets/debutant-elsa.mp4` clip length (seconds). */
+const DEBUT_ELSA_VIDEO_DURATION_S = 75;
+
+const SNOW_BACKDROP_FADE_OUT_S = 0.7;
+const SYNC_OPENING_REVEAL_AT = syncBackdropOpeningRevealCompleteAt(
+  DEBUT_RISING_ICE_WINDOWS,
+);
 
 declare global {
   interface Window {
@@ -527,61 +579,54 @@ export default function App() {
         videoSound
         compactVideo
         hideGlobalPetalsWhileInView
-        videoEdgeBeams={{ start: 0, end: 53, dimFrom: 46 }}
+        videoTimedBackdrop={{
+          start: 0,
+          /* Full strength until opening sync columns finish first reveal (~10.45s), then fade. */
+          end: SYNC_OPENING_REVEAL_AT + SNOW_BACKDROP_FADE_OUT_S,
+          image: "/assets/images/elsa-snow-open-backdrop.png?v=6",
+          opacity: 0.94,
+          fadeInDuration: 0,
+          fadeOutDuration: SNOW_BACKDROP_FADE_OUT_S,
+          coverScale: 1.42,
+          objectPositionY: 48,
+          offsetUpCm: 1,
+          offsetLeftCm: 2,
+        }}
+        videoEdgeBeams={{
+          start: 8,
+          end: 63,
+          dimFrom: 63,
+          airyVioletFrom: 42,
+          airyVioletUntil: 63,
+          pinkGlowFrom: 43,
+          pinkGlowUntil: 63,
+          fadeInDuration: 2.1,
+          fadeOutDuration: 0.65,
+        }}
         violetShardAt={[{ time: 13 }, { time: 20 }]}
         videoCrystalMoments={[
           {
-            start: 43,
+            start: 42,
             end: 54,
             style: "side",
             glitterBurst: { start: 46, end: 47.75 },
           },
           { start: 67, end: 74.5, style: "finale" },
         ]}
-        risingIceCrystals={[
-          {
-            start: 6,
-            end: 10,
-            backgroundImage: "/assets/images/elsa-ice-palace-vertical.png",
-            syncBackdropImage: "/assets/images/elsa-rising-sync-backdrop.png?v=4",
-            syncBackdropStrength: 0.55,
-            syncBackdropHoldUntil: 27,
-          },
-          {
-            start: 17.5,
-            end: 20,
-            backgroundImage: "/assets/images/elsa-ice-palace-vertical.png",
-            sliceSide: "right",
-            syncBackdropImage: "/assets/images/elsa-rising-sync-backdrop.png?v=4",
-            syncBackdropStrength: 0.55,
-            syncBackdropHoldUntil: 27,
-          },
-          {
-            start: 18,
-            end: 20.2,
-            backgroundImage: "/assets/images/elsa-ice-palace-vertical.png",
-            sliceIndices: [5],
-            sliceRiseDelay: 0.18,
-            syncBackdropImage: "/assets/images/elsa-rising-sync-backdrop.png?v=4",
-            syncBackdropStrength: 0.55,
-            syncBackdropHoldUntil: 27,
-          },
-          {
-            start: 20.5,
-            end: 22,
-            backgroundImage: "/assets/images/elsa-ice-palace-vertical.png",
-            syncBackdropImage: "/assets/images/elsa-rising-sync-backdrop.png?v=4",
-            syncBackdropStrength: 0.55,
-            syncBackdropHoldUntil: 27,
-          },
-        ]}
+        risingIceCrystals={DEBUT_RISING_ICE_WINDOWS}
         risingSyncBackdropReplacement={{
           at: 27,
-          image: "/assets/images/elsa-crystalled-backdrop.png?v=4",
-          revealDuration: 3,
-          crossfadeDuration: 2.8,
-          holdUntil: 41.5,
-          strength: 0.58,
+          image: "/assets/images/elsa-crystalled-backdrop.png?v=8",
+          revealMode: "pop",
+          revealDuration: 3.4,
+          /* Crystal exits during the fast ~0:34 zoom; rising sync returns in the same window. */
+          holdUntil: 34.25,
+          fadeOutDuration: 0.25,
+          strength: 0.76,
+          syncRestoreStart: 34,
+          syncRestoreFadeDuration: 0.25,
+          syncRestoreUntil: DEBUT_ELSA_VIDEO_DURATION_S,
+          syncRestoreEndFade: 0,
         }}
         iceCrystalAt={[
           { time: 11 },
@@ -604,8 +649,15 @@ export default function App() {
           { time: 73, variant: "finale" },
           { time: 73.6, variant: "finale" },
           { time: 74.2, variant: "finale" },
-          { time: 74.8, variant: "finale" },
         ]}
+        icePalaceDoorClose={{
+          image: "/assets/images/elsa-ice-palace-vertical.png?v=1",
+          closeAt: 73,
+          closeDuration: 0.4,
+          closedOpacity: 0.58,
+          skipPeek: true,
+          objectPosition: "center center",
+        }}
         videoPanKeyframes={[
           { time: 0, xPercent: 50 },
           { time: 9, xPercent: 16 },
@@ -614,8 +666,8 @@ export default function App() {
           { time: 23, xPercent: 16 },
           { time: 28, xPercent: 84 },
           { time: 34, xPercent: 50, scale: 1 },
-          { time: 35, xPercent: 67, scale: 1.14 },
-          { time: 40, xPercent: 50, scale: 1.12 },
+          { time: 34.25, xPercent: 58, scale: 1.22, ease: "linear" },
+          { time: 62.5, xPercent: 58, scale: 1.22 },
           { time: 63, xPercent: 60, scale: 1.62 },
           { time: 66.9, xPercent: 60, scale: 1.62 },
           { time: 67, xPercent: 58, scale: 1, ease: "linear" },

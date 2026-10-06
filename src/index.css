@@ -291,6 +291,10 @@ html {
   transform: translateZ(0);
 }
 
+.video-pan-sync-backdrop {
+  transform: translateZ(0);
+}
+
 .crystal-edge-overlay {
   contain: layout style paint;
 }
@@ -307,12 +311,144 @@ html {
   contain: layout style paint;
 }
 
+/* Top blue wash (46% frame height ≈ 50% − 8%, soft fade down). */
+.video-backdrop-top-glow {
+  height: 46%;
+  background: linear-gradient(
+    180deg,
+    rgba(56, 189, 248, 0.54) 0%,
+    rgba(125, 211, 252, 0.36) 32%,
+    rgba(186, 230, 253, 0.16) 62%,
+    transparent 100%
+  );
+  filter: blur(11px);
+  pointer-events: none;
+}
+
+/* Same gradient, blended over backdrop art (not hidden underneath). */
+.video-backdrop-top-glow--overlay {
+  mix-blend-mode: screen;
+  isolation: isolate;
+}
+
+.video-backdrop-top-glow--deep {
+  background: linear-gradient(
+    180deg,
+    rgba(21, 62, 180, 0.46) 0%,
+    rgba(29, 78, 216, 0.3) 34%,
+    rgba(125, 211, 252, 0.14) 64%,
+    transparent 100%
+  );
+}
+
+.video-backdrop-top-glow--sky {
+  background: linear-gradient(
+    180deg,
+    rgba(14, 165, 233, 0.5) 0%,
+    rgba(56, 189, 248, 0.34) 36%,
+    rgba(186, 230, 253, 0.15) 66%,
+    transparent 100%
+  );
+}
+
 .video-edge-beams {
   contain: layout style paint;
 }
 
 .violet-shard-burst {
   contain: layout style paint;
+}
+
+.ice-palace-door-close {
+  contain: layout style paint;
+}
+
+.ice-palace-door-panel__art {
+  filter: brightness(1.48) contrast(0.86) saturate(1.08) hue-rotate(-6deg);
+}
+
+.ice-palace-door-panel__tint {
+  background:
+    linear-gradient(
+      155deg,
+      rgba(244, 114, 182, 0.42) 0%,
+      rgba(251, 207, 232, 0.18) 28%,
+      transparent 52%
+    ),
+    linear-gradient(
+      205deg,
+      transparent 38%,
+      rgba(186, 230, 253, 0.44) 62%,
+      rgba(167, 139, 250, 0.38) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(196, 181, 253, 0.32),
+      rgba(125, 211, 252, 0.28) 48%,
+      rgba(249, 168, 212, 0.3)
+    );
+  mix-blend-mode: soft-light;
+  opacity: 0.94;
+}
+
+.ice-palace-door-panel__tint--left {
+  background:
+    linear-gradient(
+      120deg,
+      rgba(244, 114, 182, 0.48) 0%,
+      rgba(251, 207, 232, 0.22) 35%,
+      transparent 58%
+    ),
+    linear-gradient(
+      200deg,
+      transparent 42%,
+      rgba(186, 230, 253, 0.4) 68%,
+      rgba(139, 92, 246, 0.34) 100%
+    );
+}
+
+.ice-palace-door-panel__tint--right {
+  background:
+    linear-gradient(
+      240deg,
+      rgba(167, 139, 250, 0.46) 0%,
+      rgba(196, 181, 253, 0.24) 32%,
+      transparent 55%
+    ),
+    linear-gradient(
+      160deg,
+      transparent 40%,
+      rgba(125, 211, 252, 0.42) 65%,
+      rgba(244, 114, 182, 0.28) 100%
+    );
+}
+
+.ice-palace-door-panel__lift {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(224, 242, 254, 0.1) 38%,
+    rgba(251, 207, 232, 0.08) 72%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.85;
+}
+
+.ice-palace-door-close .ice-palace-door-seam {
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(251, 207, 232, 0.75) 14%,
+    rgba(186, 230, 253, 0.95) 48%,
+    rgba(196, 181, 253, 0.82) 52%,
+    rgba(186, 230, 253, 0.95) 86%,
+    transparent
+  );
+  box-shadow:
+    0 0 14px rgba(244, 114, 182, 0.55),
+    0 0 28px rgba(125, 211, 252, 0.5),
+    0 0 36px rgba(167, 139, 250, 0.35);
 }
 
 .video-edge-beam-ice-facet {
@@ -417,6 +553,23 @@ html {
   48%,
   52% {
     background-position: -30% 0;
+  }
+}
+
+.video-edge-pink-pulse {
+  animation: edge-pink-glow-pulse 4.6s ease-in-out infinite;
+  will-change: opacity, filter;
+}
+
+@keyframes edge-pink-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.52;
+    filter: blur(14px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(19px);
   }
 }
 

@@ -4,6 +4,11 @@ import {
   isVideoLoopJump,
 } from "../utils/videoPlaybackTime";
 import {
+  drawSyncedTopBlueGlow,
+  edgeBeamGlowMix,
+  type VideoEdgeBeamWindow,
+} from "../utils/videoEdgeBeamGlow";
+import {
   ICE_SHARD_SLICE_COUNT,
   processIceShardFrame,
   processRisingSyncBackdropFrame,
@@ -38,12 +43,25 @@ export type RisingSyncBackdropReplacement = {
   image: string;
   /** Seconds for the top-down reveal (default 3). */
   revealDuration?: number;
-  /** Crossfade from column sync backdrop (default: same as revealDuration). */
+  /** Legacy uniform crossfade; curtain handoff uses `revealDuration` instead. */
   crossfadeDuration?: number;
+  /**
+   * `pop` (default): fade in only crystal deltas over the sync backdrop.
+   * `curtain`: top-down wipe (harder edge).
+   */
+  revealMode?: "pop" | "curtain";
   /** Clip seconds to keep visible after reveal (default 41.5). */
   holdUntil?: number;
   fadeOutDuration?: number;
   strength?: number;
+  /** Clip second to begin fading rising sync back in (often start of zoom). */
+  syncRestoreStart?: number;
+  /** Seconds to fade rising sync in (default 0.35). */
+  syncRestoreFadeDuration?: number;
+  /** Keep restored sync visible until this clip second (default 41.5). */
+  syncRestoreUntil?: number;
+  /** Fade restored sync after `syncRestoreUntil` (0 = hold full strength, no end fade). */
+  syncRestoreEndFade?: number;
 };
 
 const SYNC_BACKDROP_FADE_IN_S = 0.55;
@@ -51,8 +69,10 @@ const DEFAULT_REPLACEMENT_HOLD_UNTIL = 41.5;
 const DEFAULT_REPLACEMENT_REVEAL_S = 3;
 const SYNC_BACKDROP_FADE_OUT_S = 0.85;
 const DEFAULT_SYNC_BACKDROP_HOLD_UNTIL = 67;
-/** Clip padding so adjacent column passes overlap (no vertical gaps). */
-const SYNC_BACKDROP_COLUMN_CLIP_PAD_PX = 2;
+const syncBackdropScratch = new WeakMap<
+  ProcessedPalace,
+  { canvas: HTMLCanvasElement; w: number; h: number }
+>();
 
 type PalaceSlice = {
   index: number;
@@ -116,6 +136,41 @@ export function normalizeRisingIceWindows(
   input: RisingIceCrystalsWindow | RisingIceCrystalsWindow[],
 ): RisingIceCrystalsWindow[] {
   return Array.isArray(input) ? input : [input];
+}
+
+/**
+ * When the first rising-ice window has finished revealing every sync column that
+ * can rise within that window (first shard cycle + column opacity bump).
+ */
+export function syncBackdropOpeningRevealCompleteAt(
+  input: RisingIceCrystalsWindow | RisingIceCrystalsWindow[],
+): number {
+  const windows = normalizeRisingIceWindows(input);
+  const opening = windows
+    .filter((w) => w.syncBackdropImage)
+    .sort((a, b) => a.start - b.start)[0];
+  if (!opening) return 0;
+
+  const slices = buildSlices();
+  const span = opening.end - opening.start;
+  let latest = opening.start;
+
+  for (const slice of slices) {
+    if (!sliceIncludedInWindow(opening, slice.index)) continue;
+    const cycleOffset = cycleOffsetForWindowSlice(opening, slice);
+    const localEnd = cycleOffset + slice.riseTime;
+    if (localEnd > span) continue;
+    latest = Math.max(
+      latest,
+      opening.start + localEnd + SYNC_BACKDROP_FADE_IN_S,
+    );
+  }
+
+  if (latest <= opening.start) {
+    latest = opening.end + SYNC_BACKDROP_FADE_IN_S;
+  }
+
+  return latest;
 }
 
 function processPalaceImage(
@@ -343,30 +398,123 @@ function columnBackdropOpacity(
   return level * fadeOut;
 }
 
-/** One column: clip a vertical band and paint the full backdrop (avoids slice seam lines). */
-function drawSyncBackdropColumnClipped(
-  ctx: CanvasRenderingContext2D,
+function getSyncBackdropScratch(
   backdrop: ProcessedPalace,
-  index: number,
   w: number,
   h: number,
-  alpha: number,
-) {
-  const sliceW = w / SLICE_COUNT;
-  const pad = SYNC_BACKDROP_COLUMN_CLIP_PAD_PX;
-  const x0 = index * sliceW;
-  const clipX = index === 0 ? 0 : x0 - pad;
-  const clipW =
-    index === SLICE_COUNT - 1 ? w - clipX : sliceW + pad * 2;
+): HTMLCanvasElement {
+  const key = syncBackdropScratch.get(backdrop);
+  if (key && key.w === w && key.h === h) return key.canvas;
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(clipX, 0, clipW, h);
-  ctx.clip();
-  ctx.globalAlpha = alpha;
-  ctx.globalCompositeOperation = "source-over";
-  ctx.drawImage(backdrop.canvas, 0, 0, w, h);
-  ctx.restore();
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.floor(w));
+  canvas.height = Math.max(1, Math.floor(h));
+  syncBackdropScratch.set(backdrop, { canvas, w, h });
+  return canvas;
+}
+
+function applyColumnOpacityMask(
+  backdrop: ProcessedPalace,
+  opacities: number[],
+  w: number,
+  h: number,
+): HTMLCanvasElement {
+  const out = getSyncBackdropScratch(backdrop, w, h);
+  const octx = out.getContext("2d");
+  if (!octx) return backdrop.canvas;
+
+  octx.clearRect(0, 0, w, h);
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = "high";
+  octx.drawImage(backdrop.canvas, 0, 0, w, h);
+
+  const sliceW = w / SLICE_COUNT;
+  const imageData = octx.getImageData(0, 0, w, h);
+  const px = imageData.data;
+
+  for (let index = 0; index < SLICE_COUNT; index++) {
+    const colOp = opacities[index];
+    if (colOp >= 0.999) continue;
+
+    const xStart = Math.floor(index * sliceW);
+    const xEnd =
+      index === SLICE_COUNT - 1 ? w : Math.floor((index + 1) * sliceW);
+
+    for (let y = 0; y < h; y++) {
+      for (let x = xStart; x < xEnd; x++) {
+        const ai = (y * w + x) * 4 + 3;
+        px[ai] = Math.round(px[ai] * colOp);
+      }
+    }
+  }
+
+  octx.putImageData(imageData, 0, 0);
+  return out;
+}
+
+function syncBackdropCurtainHandoffActive(
+  t: number,
+  replacement: RisingSyncBackdropReplacement | undefined,
+): boolean {
+  if (!replacement) return false;
+  if (t < replacement.at) return false;
+  const duration = replacement.revealDuration ?? DEFAULT_REPLACEMENT_REVEAL_S;
+  return t < replacement.at + duration - 0.001;
+}
+
+function maxColumnSyncBackdropOpacity(
+  t: number,
+  windows: RisingIceCrystalsWindow[],
+  slices: PalaceSlice[],
+  holdUntil: number,
+): number {
+  let peak = 0;
+  for (let index = 0; index < SLICE_COUNT; index++) {
+    peak = Math.max(
+      peak,
+      columnBackdropOpacity(t, windows, slices, index, holdUntil),
+    );
+  }
+  return peak;
+}
+
+function risingSyncTopLightLevel(
+  t: number,
+  windows: RisingIceCrystalsWindow[],
+  slices: PalaceSlice[],
+  replacement: RisingSyncBackdropReplacement | undefined,
+  opts: {
+    backdropOnTimeline: boolean;
+    curtainHandoff: boolean;
+    syncRestoreLevel: number;
+    underCrystalScale: number;
+    replAt: number;
+  },
+): number {
+  if (!windows.some((win) => win.syncBackdropImage)) return 0;
+
+  let level = 0;
+  if (opts.syncRestoreLevel > 0.004) {
+    level = Math.max(level, opts.syncRestoreLevel);
+  }
+  if (opts.underCrystalScale > 0.004) {
+    level = Math.max(level, opts.underCrystalScale);
+  }
+  if (opts.curtainHandoff) {
+    level = Math.max(level, 1);
+  }
+  if (opts.backdropOnTimeline && t < opts.replAt) {
+    level = Math.max(
+      level,
+      maxColumnSyncBackdropOpacity(
+        t,
+        windows,
+        slices,
+        syncBackdropHoldUntil(windows),
+      ),
+    );
+  }
+  return level;
 }
 
 function drawPersistentSyncBackdrop(
@@ -378,10 +526,12 @@ function drawPersistentSyncBackdrop(
   h: number,
   t: number,
   opacityScale = 1,
+  clipBelowY?: number,
+  holdUntilOverride?: number,
 ) {
   if (opacityScale <= 0.004) return false;
 
-  const holdUntil = syncBackdropHoldUntil(windows);
+  const holdUntil = holdUntilOverride ?? syncBackdropHoldUntil(windows);
   const strength =
     (windows.find((win) => win.syncBackdropImage)?.syncBackdropStrength ?? 0.55) *
     opacityScale;
@@ -403,35 +553,29 @@ function drawPersistentSyncBackdrop(
   const minO = Math.min(...active.map(({ opacity }) => opacity));
   const maxO = Math.max(...active.map(({ opacity }) => opacity));
 
-  if (maxO - minO < 0.025) {
-    ctx.save();
-    ctx.globalAlpha = maxO * strength;
-    ctx.globalCompositeOperation = "source-over";
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(backdrop.canvas, 0, 0, w, h);
-    ctx.restore();
-    return any;
-  }
+  const source =
+    maxO - minO < 0.025
+      ? backdrop.canvas
+      : applyColumnOpacityMask(backdrop, opacities, w, h);
 
-  for (const { opacity, index } of active) {
-    drawSyncBackdropColumnClipped(
-      ctx,
-      backdrop,
-      index,
-      w,
-      h,
-      opacity * strength,
-    );
+  ctx.save();
+  if (clipBelowY != null && clipBelowY < h - 0.5) {
+    ctx.beginPath();
+    ctx.rect(0, Math.max(0, clipBelowY), w, h - Math.max(0, clipBelowY));
+    ctx.clip();
   }
+  ctx.globalAlpha = (maxO - minO < 0.025 ? maxO : 1) * strength;
+  ctx.globalCompositeOperation = "source-over";
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source, 0, 0, w, h);
+  ctx.restore();
 
   return any;
 }
 
 function replacementTimelineEnd(replacement: RisingSyncBackdropReplacement): number {
-  const hold = replacement.holdUntil ?? DEFAULT_REPLACEMENT_HOLD_UNTIL;
-  const fade = replacement.fadeOutDuration ?? SYNC_BACKDROP_FADE_OUT_S;
-  return hold + fade;
+  return replacement.holdUntil ?? DEFAULT_REPLACEMENT_HOLD_UNTIL;
 }
 
 function replacementTimelineActive(
@@ -442,25 +586,6 @@ function replacementTimelineActive(
   return t >= replacement.at && t <= replacementTimelineEnd(replacement);
 }
 
-function syncBackdropHandoffCrossfade(
-  t: number,
-  replacement: RisingSyncBackdropReplacement | undefined,
-): { outgoing: number; incoming: number } {
-  if (!replacement) return { outgoing: 1, incoming: 0 };
-
-  const at = replacement.at;
-  const duration =
-    replacement.crossfadeDuration ??
-    replacement.revealDuration ??
-    DEFAULT_REPLACEMENT_REVEAL_S;
-
-  if (t < at) return { outgoing: 1, incoming: 0 };
-  if (t >= at + duration) return { outgoing: 0, incoming: 1 };
-
-  const u = easeInOutCubic((t - at) / duration);
-  return { outgoing: 1 - u, incoming: u };
-}
-
 function replacementRevealProgress(
   t: number,
   replacement: RisingSyncBackdropReplacement,
@@ -468,6 +593,16 @@ function replacementRevealProgress(
   if (t < replacement.at) return 0;
   const duration = replacement.revealDuration ?? DEFAULT_REPLACEMENT_REVEAL_S;
   return easeInOutCubic(Math.min(1, (t - replacement.at) / duration));
+}
+
+function replacementRevealMode(
+  replacement: RisingSyncBackdropReplacement,
+): "pop" | "curtain" {
+  return replacement.revealMode ?? "pop";
+}
+
+function crystalPopHandoffAlpha(revealProgress: number): number {
+  return easeOutCubic(Math.min(1, Math.max(0, revealProgress)));
 }
 
 function replacementLayerAlpha(
@@ -480,15 +615,57 @@ function replacementLayerAlpha(
   const holdUntil = replacement.holdUntil ?? DEFAULT_REPLACEMENT_HOLD_UNTIL;
   let alpha = strength;
 
-  if (t > holdUntil) {
-    const fade = replacement.fadeOutDuration ?? SYNC_BACKDROP_FADE_OUT_S;
-    alpha *= Math.min(
-      1,
-      Math.max(0, (replacementTimelineEnd(replacement) - t) / fade),
-    );
+  const fade = replacement.fadeOutDuration ?? SYNC_BACKDROP_FADE_OUT_S;
+  const fadeStart = holdUntil - fade;
+  if (t > fadeStart) {
+    alpha *= Math.min(1, Math.max(0, (holdUntil - t) / fade));
   }
 
   return alpha;
+}
+
+/** Fades the sync underlay with the crystalled layer during its exit. */
+function replacementSyncUnderlayScale(
+  t: number,
+  replacement: RisingSyncBackdropReplacement,
+  revealProgress: number,
+): number {
+  const strength = replacement.strength ?? 0.58;
+  const layerAlpha = replacementLayerAlpha(t, replacement, revealProgress);
+  if (layerAlpha <= 0.004 || strength <= 0.004) return 0;
+  return Math.min(1, layerAlpha / strength);
+}
+
+function syncRestoreStartAt(
+  replacement: RisingSyncBackdropReplacement,
+): number {
+  if (replacement.syncRestoreStart != null) return replacement.syncRestoreStart;
+  const hold = replacement.holdUntil ?? DEFAULT_REPLACEMENT_HOLD_UNTIL;
+  const fadeIn = replacement.syncRestoreFadeDuration ?? 0.35;
+  return hold - fadeIn;
+}
+
+function syncRestoreOpacity(
+  t: number,
+  replacement: RisingSyncBackdropReplacement,
+): number {
+  const restoreStart = syncRestoreStartAt(replacement);
+  if (t < restoreStart) return 0;
+
+  const fadeIn = replacement.syncRestoreFadeDuration ?? 0.35;
+  const holdUntil = replacement.syncRestoreUntil ?? DEFAULT_REPLACEMENT_HOLD_UNTIL;
+  const fadeOut =
+    replacement.syncRestoreEndFade ?? SYNC_BACKDROP_FADE_OUT_S;
+
+  if (fadeIn > 0 && t < restoreStart + fadeIn) {
+    return easeInOutCubic((t - restoreStart) / fadeIn);
+  }
+  if (t <= holdUntil) return 1;
+  if (fadeOut <= 0) return 1;
+  if (t <= holdUntil + fadeOut) {
+    return easeInOutCubic((holdUntil + fadeOut - t) / fadeOut);
+  }
+  return 0;
 }
 
 function drawSyncBackdropReplacement(
@@ -498,20 +675,23 @@ function drawSyncBackdropReplacement(
   h: number,
   t: number,
   replacement: RisingSyncBackdropReplacement,
-  incomingScale = 1,
 ): boolean {
   const reveal = replacementRevealProgress(t, replacement);
-  if (reveal <= 0.002 || incomingScale <= 0.004) return false;
+  if (reveal <= 0.002) return false;
 
-  const alpha = replacementLayerAlpha(t, replacement, reveal) * incomingScale;
+  const mode = replacementRevealMode(replacement);
+  let alpha = replacementLayerAlpha(t, replacement, reveal);
+  if (mode === "pop") {
+    alpha *= crystalPopHandoffAlpha(reveal);
+  }
   if (alpha <= 0.004) return false;
 
-  const revealH = h * reveal;
-
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, 0, w, revealH);
-  ctx.clip();
+  if (mode === "curtain") {
+    ctx.beginPath();
+    ctx.rect(0, 0, w, h * reveal);
+    ctx.clip();
+  }
   ctx.globalAlpha = alpha;
   ctx.globalCompositeOperation = "source-over";
   ctx.imageSmoothingEnabled = true;
@@ -520,6 +700,35 @@ function drawSyncBackdropReplacement(
   ctx.restore();
 
   return true;
+}
+
+/** Height of the upward spike at the leading (top) edge of a rising column. */
+function shardTipHeight(sliceW: number, index: number): number {
+  const r = seed(index * 13.17 + 4.2);
+  return sliceW * (0.32 + r * 0.26);
+}
+
+function clipRisingShardSpike(
+  ctx: CanvasRenderingContext2D,
+  destX: number,
+  destY: number,
+  sliceW: number,
+  h: number,
+  index: number,
+) {
+  const tipH = Math.min(shardTipHeight(sliceW, index), h * 0.14);
+  const peakBias = (seed(index * 17.83 + 1.9) - 0.5) * 0.18;
+  const peakX = destX + sliceW * (0.5 + peakBias);
+  const yBase = destY + tipH;
+
+  ctx.beginPath();
+  ctx.moveTo(destX, yBase);
+  ctx.lineTo(peakX, destY);
+  ctx.lineTo(destX + sliceW, yBase);
+  ctx.lineTo(destX + sliceW, destY + h);
+  ctx.lineTo(destX, destY + h);
+  ctx.closePath();
+  ctx.clip();
 }
 
 function drawPalaceSlices(
@@ -546,7 +755,8 @@ function drawPalaceSlices(
     const srcW = palace.canvas.width / SLICE_COUNT;
 
     ctx.save();
-    ctx.globalAlpha = master * frame.alpha * 0.82;
+    clipRisingShardSpike(ctx, destX, destY, sliceW, h, slice.index);
+    ctx.globalAlpha = master * frame.alpha * 0.92;
     ctx.globalCompositeOperation = "screen";
     ctx.drawImage(
       palace.canvas,
@@ -567,12 +777,18 @@ type RisingIceCrystalsOverlayProps = {
   video: HTMLVideoElement | null;
   windows: RisingIceCrystalsWindow | RisingIceCrystalsWindow[];
   syncBackdropReplacement?: RisingSyncBackdropReplacement;
+  /** No sync top wash while snow (or other) full backdrop is up (clip seconds). */
+  syncTopGlowSuppressUntil?: number;
+  /** Edge beam timing — top wash color tracks bottom beam phase (deep / sky / soft). */
+  edgeBeamWindow?: VideoEdgeBeamWindow;
 };
 
 export default function RisingIceCrystalsOverlay({
   video,
   windows: windowsInput,
   syncBackdropReplacement,
+  syncTopGlowSuppressUntil,
+  edgeBeamWindow,
 }: RisingIceCrystalsOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -612,6 +828,9 @@ export default function RisingIceCrystalsOverlay({
     syncBackdropReplacement?.at ?? "",
     syncBackdropReplacement?.revealDuration ?? "",
   ].join(";");
+  const edgeBeamKey = edgeBeamWindow
+    ? `${edgeBeamWindow.start}-${edgeBeamWindow.end}-${edgeBeamWindow.dimFrom ?? ""}-${edgeBeamWindow.airyVioletFrom ?? ""}-${edgeBeamWindow.airyVioletUntil ?? ""}`
+    : "";
 
   useEffect(() => {
     palaceRef.current = null;
@@ -642,6 +861,8 @@ export default function RisingIceCrystalsOverlay({
     };
   }, [bgSrc]);
 
+  const syncBackdropSrc = windows.find((win) => win.syncBackdropImage)?.syncBackdropImage;
+
   useEffect(() => {
     backdropRef.current = new Map();
     if (!backdropSrcs.length) return;
@@ -659,13 +880,17 @@ export default function RisingIceCrystalsOverlay({
       if (cancelled || !wrap) return;
       const pw = Math.max(1, wrap.clientWidth);
       const ph = Math.max(1, wrap.clientHeight);
+      const crystalSrc = syncBackdropReplacement?.image;
       for (const { src, img } of images) {
         if (!img.complete) continue;
         backdropRef.current.set(src, {
-          canvas: processRisingSyncBackdropFrame(img, pw, ph),
+          canvas: processRisingSyncBackdropFrame(img, pw, ph, {
+            softenEdges: Boolean(crystalSrc && src === crystalSrc),
+          }),
           ready: true,
         });
       }
+
     };
 
     for (const { img } of images) {
@@ -684,7 +909,7 @@ export default function RisingIceCrystalsOverlay({
       }
       ro?.disconnect();
     };
-  }, [backdropKey, backdropSrcs]);
+  }, [backdropKey, backdropSrcs, syncBackdropSrc, syncBackdropReplacement?.image, syncBackdropReplacement?.revealMode]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -744,47 +969,124 @@ export default function RisingIceCrystalsOverlay({
       }
 
       const palace = palaceRef.current;
-      const handoff = syncBackdropHandoffCrossfade(t, syncBackdropReplacement);
       const replacementActive = replacementTimelineActive(
         t,
         syncBackdropReplacement,
       );
       const backdropOnTimeline = syncBackdropTimelineActive(t, windows, slices);
-      const crossfadeOutgoing =
+      const curtainHandoff = syncBackdropCurtainHandoffActive(
+        t,
+        syncBackdropReplacement,
+      );
+      const curtainReveal = syncBackdropReplacement
+        ? replacementRevealProgress(t, syncBackdropReplacement)
+        : 0;
+      const curtainY = h * curtainReveal;
+      const handoffMode = syncBackdropReplacement
+        ? replacementRevealMode(syncBackdropReplacement)
+        : "pop";
+      const replAt = syncBackdropReplacement?.at ?? Number.POSITIVE_INFINITY;
+      const crystalLayerActive = Boolean(
         syncBackdropReplacement &&
-        t >= syncBackdropReplacement.at &&
-        handoff.outgoing > 0.004;
+          replacementActive &&
+          t >= replAt,
+      );
+      const syncUnderCrystalTime = crystalLayerActive
+        ? Math.min(t, replAt - 0.001)
+        : t;
+
+      const syncRestoreLevel = syncBackdropReplacement
+        ? syncRestoreOpacity(t, syncBackdropReplacement)
+        : 0;
+
       let anyVisible =
-        backdropOnTimeline || replacementActive || Boolean(crossfadeOutgoing);
+        backdropOnTimeline ||
+        replacementActive ||
+        curtainHandoff ||
+        syncRestoreLevel > 0.004;
 
       const columnOpacityTime =
-        crossfadeOutgoing && syncBackdropReplacement
+        curtainHandoff && syncBackdropReplacement
           ? Math.min(t, syncBackdropReplacement.at - 0.001)
           : t;
 
-      const showColumnSync =
-        handoff.outgoing > 0.004 &&
-        (backdropOnTimeline || crossfadeOutgoing);
-
-      const backdropSrc = windows.find((win) => win.syncBackdropImage)?.syncBackdropImage;
-      if (showColumnSync && backdropSrc) {
+      const backdropSrc = syncBackdropSrc;
+      let underCrystalScale = 0;
+      if (backdropSrc) {
         const backdrop = backdropRef.current.get(backdropSrc);
         if (backdrop?.ready) {
-          anyVisible =
-            drawPersistentSyncBackdrop(
-              ctx,
-              backdrop,
-              windows,
-              slices,
-              w,
-              h,
-              columnOpacityTime,
-              handoff.outgoing,
-            ) || anyVisible;
+          if (
+            syncRestoreLevel > 0.004 &&
+            syncBackdropReplacement
+          ) {
+            anyVisible =
+              drawPersistentSyncBackdrop(
+                ctx,
+                backdrop,
+                windows,
+                slices,
+                w,
+                h,
+                t,
+                syncRestoreLevel,
+                undefined,
+                syncBackdropReplacement.syncRestoreUntil ??
+                  DEFAULT_REPLACEMENT_HOLD_UNTIL,
+              ) || anyVisible;
+          } else if (
+            crystalLayerActive &&
+            handoffMode === "pop" &&
+            syncBackdropReplacement
+          ) {
+            const underScale = replacementSyncUnderlayScale(
+              t,
+              syncBackdropReplacement,
+              curtainReveal,
+            );
+            underCrystalScale = underScale;
+            if (underScale > 0.004) {
+              anyVisible =
+                drawPersistentSyncBackdrop(
+                  ctx,
+                  backdrop,
+                  windows,
+                  slices,
+                  w,
+                  h,
+                  syncUnderCrystalTime,
+                  underScale,
+                ) || anyVisible;
+            }
+          } else if (curtainHandoff) {
+            anyVisible =
+              drawPersistentSyncBackdrop(
+                ctx,
+                backdrop,
+                windows,
+                slices,
+                w,
+                h,
+                columnOpacityTime,
+                1,
+                curtainY,
+              ) || anyVisible;
+          } else if (backdropOnTimeline && t < replAt) {
+            anyVisible =
+              drawPersistentSyncBackdrop(
+                ctx,
+                backdrop,
+                windows,
+                slices,
+                w,
+                h,
+                t,
+                1,
+              ) || anyVisible;
+          }
         }
       }
 
-      if (syncBackdropReplacement && replacementActive) {
+      if (crystalLayerActive && syncBackdropReplacement) {
         const repl = backdropRef.current.get(syncBackdropReplacement.image);
         if (repl?.ready) {
           anyVisible =
@@ -795,7 +1097,6 @@ export default function RisingIceCrystalsOverlay({
               h,
               t,
               syncBackdropReplacement,
-              handoff.incoming,
             ) || anyVisible;
         }
       }
@@ -815,6 +1116,26 @@ export default function RisingIceCrystalsOverlay({
           t - win.start,
           win,
         );
+      }
+
+      const syncTopLevel = risingSyncTopLightLevel(
+        t,
+        windows,
+        slices,
+        syncBackdropReplacement,
+        {
+          backdropOnTimeline,
+          curtainHandoff,
+          syncRestoreLevel,
+          underCrystalScale,
+          replAt,
+        },
+      );
+      const snowOpenActive =
+        syncTopGlowSuppressUntil != null && t < syncTopGlowSuppressUntil;
+      if (syncTopLevel > 0.004 && !snowOpenActive) {
+        const { skyMix, softMix } = edgeBeamGlowMix(t, edgeBeamWindow);
+        drawSyncedTopBlueGlow(ctx, w, h, syncTopLevel, skyMix, softMix);
       }
 
       if (!anyVisible) {
@@ -874,14 +1195,22 @@ export default function RisingIceCrystalsOverlay({
       video.removeEventListener("seeked", onLoopPoint);
       video.removeEventListener("timeupdate", syncClock);
     };
-  }, [video, windowKey, windows, slices, syncBackdropReplacement]);
+  }, [
+    video,
+    windowKey,
+    windows,
+    slices,
+    syncBackdropReplacement,
+    syncTopGlowSuppressUntil,
+    edgeBeamKey,
+  ]);
 
   if (!video || !windows.length) return null;
 
   return (
     <div
       ref={wrapRef}
-      className="rising-ice-crystals pointer-events-none absolute inset-0 z-[19] overflow-hidden"
+      className="rising-ice-crystals video-pan-sync-backdrop pointer-events-none absolute inset-0 z-[19] overflow-hidden"
       aria-hidden
       style={{ opacity: 0, visibility: "hidden" }}
     >

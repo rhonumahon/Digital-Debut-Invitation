@@ -78,38 +78,38 @@ type FlakeSeed = {
 };
 
 const VORTICES = [
-  { x: 38, y: 52 },
-  { x: 62, y: 44 },
-  { x: 50, y: 68 },
+  { x: 30, y: 52 },
+  { x: 54, y: 44 },
+  { x: 42, y: 68 },
 ];
 
 /** Upper third — circular breezes (visible orbit, not pinned to the very top edge). */
 const VORTICES_TOP_LEFT = [
-  { x: 30, y: 22 },
-  { x: 44, y: 16 },
-  { x: 38, y: 30 },
+  { x: 24, y: 22 },
+  { x: 36, y: 16 },
+  { x: 30, y: 30 },
 ];
 
 const VORTICES_TOP_RIGHT = [
-  { x: 56, y: 16 },
-  { x: 70, y: 22 },
-  { x: 62, y: 28 },
+  { x: 48, y: 16 },
+  { x: 62, y: 22 },
+  { x: 54, y: 28 },
 ];
 
 const VORTICES_TOP_CENTER = [
-  { x: 40, y: 20 },
-  { x: 50, y: 14 },
-  { x: 60, y: 20 },
-  { x: 50, y: 26 },
+  { x: 34, y: 20 },
+  { x: 44, y: 14 },
+  { x: 52, y: 20 },
+  { x: 44, y: 26 },
 ];
 
 const VORTICES_FINALE = [
-  { x: 28, y: 18 },
-  { x: 50, y: 12 },
-  { x: 72, y: 18 },
-  { x: 38, y: 26 },
-  { x: 62, y: 26 },
-  { x: 50, y: 22 },
+  { x: 20, y: 18 },
+  { x: 42, y: 12 },
+  { x: 64, y: 18 },
+  { x: 30, y: 26 },
+  { x: 54, y: 26 },
+  { x: 42, y: 22 },
 ];
 
 function pseudoRandom(seed: number): number {
@@ -140,11 +140,14 @@ function flakesForBurst(
         : variant === "finale"
           ? 48
           : variant === "topBreeze"
-            ? 34
-            : 28;
+            ? 56
+            : 42;
   const pool = vortexPool(variant, swirl);
   const vortexCount =
-    variant === "grand" || variant === "finale" || variant === "topBreeze"
+    variant === "standard" ||
+    variant === "grand" ||
+    variant === "finale" ||
+    variant === "topBreeze"
       ? pool.length
       : 2;
   const flakes: FlakeSeed[] = [];
@@ -156,7 +159,7 @@ function flakesForBurst(
     const r5 = pseudoRandom(burstId * 73 + i * 6.3);
     const base = pool[i % vortexCount];
     const spread =
-      variant === "topBreeze" || variant === "finale" ? 11 : 10;
+      variant === "topBreeze" ? 9 : variant === "finale" ? 11 : 10;
     const vortex = {
       x: base.x + (r4 - 0.5) * spread,
       y: base.y + (r5 - 0.5) * spread,
@@ -171,9 +174,26 @@ function flakesForBurst(
     const orbitMax =
       variant === "grand"
         ? 22
-        : variant === "finale" || variant === "topBreeze"
-          ? 24
-          : 16;
+        : variant === "topBreeze"
+          ? 18
+          : variant === "finale"
+            ? 24
+            : 24;
+    let size =
+      2.5 +
+      r3 *
+        (variant === "quick"
+          ? 3.5
+          : variant === "finale"
+            ? 4.8
+            : variant === "topBreeze"
+              ? 4.2
+              : variant === "grand"
+                ? 5.2
+                : 6.75);
+    if (variant === "topBreeze" && r2 > 0.82) {
+      size += 0.8 + r1 * 1.2;
+    }
     flakes.push({
       phase: r1 * Math.PI * 2,
       orbitRadius: 10 + r3 * orbitMax,
@@ -181,17 +201,10 @@ function flakesForBurst(
       vortexX: vortex.x,
       vortexY: vortex.y,
       windFactor: 0.55 + r3 * 0.65,
-      size:
-        2.5 +
-        r3 *
-          (variant === "quick"
-            ? 3.5
-            : variant === "finale" || variant === "topBreeze"
-              ? 4.8
-              : 4.5),
+      size,
       rot: r4 * 360,
-      dot: r4 > 0.58,
-      depth: 0.25 + r5 * 0.75,
+      dot: variant === "topBreeze" ? r4 > 0.88 : r4 > 0.58,
+      depth: variant === "topBreeze" ? 0.45 + r5 * 0.55 : 0.25 + r5 * 0.75,
     });
   }
   return flakes;
@@ -235,19 +248,32 @@ function swirlMotion(
   return { x, y, rot };
 }
 
-function TinySnowflake({ size, alpha }: { size: number; alpha: number }) {
+function TinySnowflake({
+  size,
+  alpha,
+  bold = false,
+}: {
+  size: number;
+  alpha: number;
+  bold?: boolean;
+}) {
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 12 12"
       aria-hidden
-      style={{ opacity: alpha }}
+      style={{
+        opacity: alpha,
+        filter: bold
+          ? "drop-shadow(0 0 2px rgba(224,242,254,0.95)) drop-shadow(0 0 5px rgba(186,230,253,0.55))"
+          : undefined,
+      }}
     >
       <g
         fill="none"
-        stroke="rgba(248,250,252,0.95)"
-        strokeWidth="0.55"
+        stroke="rgba(248,250,252,0.98)"
+        strokeWidth={bold ? 0.85 : 0.55}
         strokeLinecap="round"
       >
         <path d="M6 1.5v9M1.5 6h9M3 3l6 6M9 3L3 9" />
@@ -261,18 +287,24 @@ function SwirlMist({
   elapsedMs,
   grand,
   topHeavy,
+  compactTop,
   mistCenterX = 50,
 }: {
   opacity: number;
   elapsedMs: number;
   grand: boolean;
   topHeavy?: boolean;
+  compactTop?: boolean;
   mistCenterX?: number;
 }) {
   const t = elapsedMs / 1000;
   const spin = t * (topHeavy ? 28 : 22);
   const anchor = topHeavy ? "top-[20%]" : "top-1/2";
-  const size = topHeavy ? "h-[58%] w-[72%]" : "h-[85%] w-[85%]";
+  const size = compactTop
+    ? "h-[44%] w-[56%]"
+    : topHeavy
+      ? "h-[58%] w-[72%]"
+      : "h-[85%] w-[85%]";
   return (
     <>
       <div
@@ -285,7 +317,7 @@ function SwirlMist({
             "conic-gradient(from 0deg, transparent, rgba(224,242,254,0.14), transparent, rgba(186,230,253,0.1), transparent)",
         }}
       />
-      {grand || topHeavy ? (
+      {grand || (topHeavy && !compactTop) ? (
         <div
           className={`absolute ${anchor} ${topHeavy ? "h-[50%] w-[66%]" : "h-[70%] w-[70%]"} -translate-y-1/2 rounded-full`}
           style={{
@@ -319,17 +351,18 @@ function SnowBreezeBurst({
   const isFinale = variant === "finale";
   const isGrand = variant === "grand";
   const mistCenterX =
-    swirl === "left" ? 38 : swirl === "right" ? 62 : 50;
+    swirl === "left" ? 32 : swirl === "right" ? 56 : 44;
   const fadeIn = Math.min(1, elapsedMs / 180);
-  const flakeAlphaBoost = isFinale ? 1.1 : isTop ? 1.08 : 1;
+  const flakeAlphaBoost = isFinale ? 1.1 : isTop ? 1.08 : 1.12;
 
   return (
     <div className="absolute inset-0 overflow-hidden">
       <SwirlMist
         opacity={opacity}
         elapsedMs={elapsedMs}
-        grand={isGrand || isTop}
+        grand={isGrand || isFinale}
         topHeavy={isTop || isFinale}
+        compactTop={isTop}
         mistCenterX={isTop ? mistCenterX : 50}
       />
       {flakes.map((flake, i) => {
@@ -338,9 +371,9 @@ function SnowBreezeBurst({
           opacity *
           fadeIn *
           flakeAlphaBoost *
-          (0.25 + flake.depth * 0.55) *
+          (isTop ? 0.42 + flake.depth * 0.58 : 0.25 + flake.depth * 0.55) *
           (0.85 + (i % 3) * 0.05);
-        const blur = flake.depth < 0.45 ? 0.6 : 0;
+        const blur = isTop ? 0 : flake.depth < 0.45 ? 0.6 : 0;
         return (
           <div
             key={i}
@@ -360,13 +393,17 @@ function SnowBreezeBurst({
                     : "bg-white/90"
                 }`}
                 style={{
-                  width: flake.size * 0.5,
-                  height: flake.size * 0.5,
+                  width: flake.size * (isTop ? 0.62 : 0.5),
+                  height: flake.size * (isTop ? 0.62 : 0.5),
                   opacity: alpha,
                 }}
               />
             ) : (
-              <TinySnowflake size={flake.size} alpha={alpha} />
+              <TinySnowflake
+                size={flake.size}
+                alpha={alpha}
+                bold={isTop && flake.size >= 5.5}
+              />
             )}
           </div>
         );
@@ -386,7 +423,7 @@ function SnowBreezeBurst({
               }
             : isTop
               ? {
-                  background: `radial-gradient(ellipse 70% 50% at ${mistCenterX}% 18%, rgba(224,242,254,0.12), transparent 55%)`,
+                  background: `radial-gradient(ellipse 52% 38% at ${mistCenterX}% 18%, rgba(224,242,254,0.09), transparent 52%)`,
                 }
               : undefined),
         }}

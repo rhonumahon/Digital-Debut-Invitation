@@ -255,7 +255,7 @@ function buildSimpleGlitters(): SimpleGlitter[] {
     const tiny = r4 > 0.34;
     return {
       id: i,
-      x: 46 + r1 * 42,
+      x: 28 + r1 * 38,
       y: 52 + r2 * 36,
       size: tiny ? 1.5 + r3 * 1.3 : 3.2 + r3 * 2.6,
       order: 0,

@@ -23,6 +23,9 @@ import RisingIceCrystalsOverlay, {
   type RisingIceCrystalsWindow,
   type RisingSyncBackdropReplacement,
 } from "./RisingIceCrystalsOverlay";
+import VideoTimedBackdropOverlay, {
+  type VideoTimedBackdropWindow,
+} from "./VideoTimedBackdropOverlay";
 import VideoEdgeBeamsOverlay, {
   type VideoEdgeBeamWindow,
 } from "./VideoEdgeBeamsOverlay";
@@ -32,6 +35,9 @@ import VioletShardBurstOverlay, {
 import CrystalTransformOverlay, {
   type CrystalMoment,
 } from "./CrystalTransformOverlay";
+import IcePalaceDoorCloseOverlay, {
+  type IcePalaceDoorCloseConfig,
+} from "./IcePalaceDoorCloseOverlay";
 import {
   estimatedVideoPlaybackTime,
   syncVideoPlaybackClock,
@@ -115,11 +121,15 @@ type DebutantMomentProps = {
   risingIceCrystals?: RisingIceCrystalsWindow | RisingIceCrystalsWindow[];
   /** Full backdrop swap (e.g. top-down reveal at 0:27). */
   risingSyncBackdropReplacement?: RisingSyncBackdropReplacement;
+  /** Full-frame backdrop for a clip time range (e.g. opening snow). */
+  videoTimedBackdrop?: VideoTimedBackdropWindow;
   /** Ice/crystal color wash on the video between start and end (clip seconds). */
   videoCrystalMoments?: CrystalMoment[];
   /** Steady dark-blue light beams along the top and bottom (clip seconds). */
   videoEdgeBeams?: VideoEdgeBeamWindow;
   violetShardAt?: VioletShardTrigger[];
+  /** Ice palace doors closing at end of clip (Let It Go–style). */
+  icePalaceDoorClose?: IcePalaceDoorCloseConfig;
   /** Hide site-wide falling petals while this block’s video is on screen. */
   hideGlobalPetalsWhileInView?: boolean;
 };
@@ -144,9 +154,11 @@ export default function DebutantMoment({
   iceCrystalAt,
   risingIceCrystals,
   risingSyncBackdropReplacement,
+  videoTimedBackdrop,
   videoCrystalMoments,
   videoEdgeBeams,
   violetShardAt,
+  icePalaceDoorClose,
   hideGlobalPetalsWhileInView = false,
 }: DebutantMomentProps) {
   const videoSources = videos?.length ? videos : video ? [video] : [];
@@ -421,9 +433,38 @@ export default function DebutantMoment({
       }
       const t = estimatedVideoPlaybackTime(el, clocks.get(el));
       const { x, y, scale } = panStateAtTime(t, videoPanKeyframes);
+      const origin = `${x}% ${y}%`;
+      const zoom = scale > 1.001 ? `scale(${scale})` : "";
+
       el.style.objectPosition = `${x}% ${y}%`;
-      el.style.transformOrigin = `${x}% ${y}%`;
-      el.style.transform = scale > 1.001 ? `scale(${scale})` : "";
+      el.style.transformOrigin = origin;
+      el.style.transform = zoom;
+
+      const shell = el.parentElement;
+      const syncBackdropPan = t <= 75;
+      shell
+        ?.querySelectorAll<HTMLElement>(".video-pan-sync-backdrop")
+        .forEach((layer) => {
+          if (!syncBackdropPan) {
+            layer.style.transform = "";
+            layer.style.transformOrigin = "";
+            return;
+          }
+          layer.style.transformOrigin = origin;
+          layer.style.transform = zoom;
+        });
+    };
+
+    const clearPan = (el: HTMLVideoElement) => {
+      el.style.objectPosition = "";
+      el.style.transform = "";
+      el.style.transformOrigin = "";
+      el.parentElement
+        ?.querySelectorAll<HTMLElement>(".video-pan-sync-backdrop")
+        .forEach((layer) => {
+          layer.style.transform = "";
+          layer.style.transformOrigin = "";
+        });
     };
 
     const stopPanLoop = (el: HTMLVideoElement) => {
@@ -524,9 +565,7 @@ export default function DebutantMoment({
         el.removeEventListener("pause", onPause);
         el.removeEventListener("ended", onLoopPoint);
         el.removeEventListener("seeked", onLoopPoint);
-        el.style.objectPosition = "";
-        el.style.transform = "";
-        el.style.transformOrigin = "";
+        clearPan(el);
       });
     };
   }, [hasVideo, panKey, videoSources.join("|"), videoPanKeyframes]);
@@ -580,7 +619,7 @@ export default function DebutantMoment({
             ? videoSources.map((src, index) => (
                 <div
                   key={src}
-                  className={`relative overflow-hidden ${
+                  className={`relative w-full overflow-hidden ${frame} ${
                     slides?.length && index === 0
                       ? "border-t border-[#f09060]/35"
                       : index > 0
@@ -594,7 +633,7 @@ export default function DebutantMoment({
                     src={src}
                     poster={index === 0 ? image : undefined}
                     aria-label={alt}
-                    className={`debutant-moment-video w-full object-cover bg-[#07182e] ${frame}`}
+                    className={`debutant-moment-video absolute inset-0 h-full w-full bg-[#07182e] object-cover${panVideo ? "" : " object-center"}`}
                     playsInline
                     defaultMuted
                     loop
@@ -657,6 +696,14 @@ export default function DebutantMoment({
                       video={crystalVideoEl}
                       windows={risingIceCrystals}
                       syncBackdropReplacement={risingSyncBackdropReplacement}
+                      syncTopGlowSuppressUntil={videoTimedBackdrop?.end}
+                      edgeBeamWindow={videoEdgeBeams}
+                    />
+                  ) : null}
+                  {index === 0 && videoTimedBackdrop ? (
+                    <VideoTimedBackdropOverlay
+                      video={crystalVideoEl}
+                      window={videoTimedBackdrop}
                     />
                   ) : null}
                   {index === 0 && videoEdgeBeams ? (
@@ -669,6 +716,12 @@ export default function DebutantMoment({
                     <VioletShardBurstOverlay
                       video={crystalVideoEl}
                       triggers={violetShardAt}
+                    />
+                  ) : null}
+                  {index === 0 && icePalaceDoorClose ? (
+                    <IcePalaceDoorCloseOverlay
+                      video={crystalVideoEl}
+                      config={icePalaceDoorClose}
                     />
                   ) : null}
                 </div>
