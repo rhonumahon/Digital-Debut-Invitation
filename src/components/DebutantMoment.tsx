@@ -10,6 +10,7 @@ import {
 import {
   isMomentVideoActuallyPlaying,
   playMomentVideoClip,
+  tryUnmuteMomentVideo,
   primeMomentVideo,
 } from "../utils/momentVideoPlayback";
 import {
@@ -233,8 +234,27 @@ export default function DebutantMoment({
       });
     };
 
+    const prominentFraction = 0.38;
+
+    const isProminentInView = (el: Element) => {
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      const visible = Math.min(rect.bottom, vh) - Math.max(rect.top, 0);
+      if (visible <= 0 || rect.height <= 0) return false;
+      return visible / rect.height >= prominentFraction;
+    };
+
+    const mayAutoUnmuteClip = (el: HTMLVideoElement) =>
+      videoSound &&
+      hasInvitationUserActivated() &&
+      (clipInView.get(el) ?? false) &&
+      isProminentInView(el);
+
     const playClip = async (el: HTMLVideoElement) => {
-      await playMomentVideoClip(el, videoSound);
+      await playMomentVideoClip(el);
+      if (mayAutoUnmuteClip(el)) {
+        await tryUnmuteMomentVideo(el);
+      }
       await new Promise((resolve) => window.setTimeout(resolve, 350));
       if (isMomentVideoActuallyPlaying(el)) {
         setPlayHint(el, false);
@@ -248,11 +268,10 @@ export default function DebutantMoment({
     playClipRef.current = playClip;
 
     const unmutePlayingClips = () => {
-      if (!videoSound) return;
-      root.querySelectorAll("video").forEach((el) => {
-        if (el.paused) return;
-        el.muted = false;
-        el.play().catch(() => {});
+      if (!videoSound || !hasInvitationUserActivated()) return;
+      clips.forEach((el) => {
+        if (el.paused || !mayAutoUnmuteClip(el)) return;
+        void tryUnmuteMomentVideo(el);
       });
     };
 
@@ -275,13 +294,7 @@ export default function DebutantMoment({
     const clips = Array.from(root.querySelectorAll("video"));
     const clipInView = new WeakMap<HTMLVideoElement, boolean>();
 
-    const isMostlyInView = (el: Element) => {
-      const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight || document.documentElement.clientHeight;
-      const visible = Math.min(rect.bottom, vh) - Math.max(rect.top, 0);
-      if (visible <= 0 || rect.height <= 0) return false;
-      return visible / rect.height >= 0.12;
-    };
+    const isMostlyInView = (el: Element) => isProminentInView(el);
 
     const setInView = (el: HTMLVideoElement, inView: boolean) => {
       const wasInView = clipInView.get(el) ?? false;
@@ -343,7 +356,7 @@ export default function DebutantMoment({
         ([entry]) => {
           setInViewWithStall(el, entry.isIntersecting);
         },
-        { threshold: 0.08, rootMargin: "80px 0px" },
+        { threshold: prominentFraction, rootMargin: "0px" },
       );
       observer.observe(el);
       return observer;
@@ -407,17 +420,10 @@ export default function DebutantMoment({
     notifyInvitationUserActivation();
     const idx = Number(el.dataset.momentVideoIndex);
     void (async () => {
-      el.muted = true;
       try {
-        await el.play();
+        await playMomentVideoClip(el);
         if (videoSound) {
-          el.muted = false;
-          try {
-            await el.play();
-          } catch {
-            el.muted = true;
-            await el.play();
-          }
+          await tryUnmuteMomentVideo(el);
         }
       } catch {
         await playClipRef.current(el);
@@ -757,13 +763,6 @@ export default function DebutantMoment({
                         onPlaying={(e) => {
                           const video = e.currentTarget;
                           video.removeAttribute("poster");
-                          if (
-                            videoSound &&
-                            hasInvitationUserActivated() &&
-                            video.muted
-                          ) {
-                            video.muted = false;
-                          }
                           setPlayHintIndex((prev) => {
                             if (!prev[index]) return prev;
                             const next = { ...prev };
@@ -790,13 +789,6 @@ export default function DebutantMoment({
                       onPlaying={(e) => {
                         const video = e.currentTarget;
                         video.removeAttribute("poster");
-                        if (
-                          videoSound &&
-                          hasInvitationUserActivated() &&
-                          video.muted
-                        ) {
-                          video.muted = false;
-                        }
                         setPlayHintIndex((prev) => {
                           if (!prev[index]) return prev;
                           const next = { ...prev };
