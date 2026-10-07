@@ -10,7 +10,6 @@ import {
 import {
   isMomentVideoActuallyPlaying,
   playMomentVideoClip,
-  tryUnmuteMomentVideo,
   primeMomentVideo,
 } from "../utils/momentVideoPlayback";
 import {
@@ -234,36 +233,8 @@ export default function DebutantMoment({
       });
     };
 
-    /** Start playback when a slice of the clip enters view (tall Elsa clip needs a low bar). */
-    const playVisibleFraction = 0.12;
-    /** Unmute only when most of the clip is on screen — avoids sound on initial page load. */
-    const soundVisibleFraction = 0.38;
-
-    const visibleFraction = (el: Element) => {
-      const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight || document.documentElement.clientHeight;
-      const visible = Math.min(rect.bottom, vh) - Math.max(rect.top, 0);
-      if (visible <= 0 || rect.height <= 0) return 0;
-      return visible / rect.height;
-    };
-
-    const isPlayableInView = (el: Element) =>
-      visibleFraction(el) >= playVisibleFraction;
-
-    const isProminentInView = (el: Element) =>
-      visibleFraction(el) >= soundVisibleFraction;
-
-    const mayAutoUnmuteClip = (el: HTMLVideoElement) =>
-      videoSound &&
-      hasInvitationUserActivated() &&
-      (clipInView.get(el) ?? false) &&
-      isProminentInView(el);
-
     const playClip = async (el: HTMLVideoElement) => {
-      await playMomentVideoClip(el);
-      if (mayAutoUnmuteClip(el)) {
-        await tryUnmuteMomentVideo(el);
-      }
+      await playMomentVideoClip(el, videoSound);
       await new Promise((resolve) => window.setTimeout(resolve, 350));
       if (isMomentVideoActuallyPlaying(el)) {
         setPlayHint(el, false);
@@ -276,16 +247,13 @@ export default function DebutantMoment({
 
     playClipRef.current = playClip;
 
-    const syncProminentUnmute = () => {
-      if (!videoSound || !hasInvitationUserActivated()) return;
-      clips.forEach((el) => {
-        if (el.paused || !el.muted || !mayAutoUnmuteClip(el)) return;
-        void tryUnmuteMomentVideo(el);
-      });
-    };
-
     const unmutePlayingClips = () => {
-      syncProminentUnmute();
+      if (!videoSound) return;
+      root.querySelectorAll("video").forEach((el) => {
+        if (el.paused) return;
+        el.muted = false;
+        el.play().catch(() => {});
+      });
     };
 
     const retryInViewClips = () => {
@@ -307,7 +275,13 @@ export default function DebutantMoment({
     const clips = Array.from(root.querySelectorAll("video"));
     const clipInView = new WeakMap<HTMLVideoElement, boolean>();
 
-    const isMostlyInView = (el: Element) => isPlayableInView(el);
+    const isMostlyInView = (el: Element) => {
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      const visible = Math.min(rect.bottom, vh) - Math.max(rect.top, 0);
+      if (visible <= 0 || rect.height <= 0) return false;
+      return visible / rect.height >= 0.12;
+    };
 
     const setInView = (el: HTMLVideoElement, inView: boolean) => {
       const wasInView = clipInView.get(el) ?? false;
@@ -399,15 +373,9 @@ export default function DebutantMoment({
       bootstrapClips();
     };
 
-    const onScrollOrResize = () => {
-      syncProminentUnmute();
-    };
-
     window.addEventListener(INVITATION_USER_ACTIVATED, onUserActivated);
     window.addEventListener(INVITATION_CELEBRATION_VISIBLE, onCelebrationVisible);
     document.addEventListener("visibilitychange", retryInViewClips);
-    window.addEventListener("scroll", onScrollOrResize, { passive: true });
-    window.addEventListener("resize", onScrollOrResize);
 
     return () => {
       window.removeEventListener(INVITATION_USER_ACTIVATED, onUserActivated);
@@ -416,8 +384,6 @@ export default function DebutantMoment({
         onCelebrationVisible,
       );
       document.removeEventListener("visibilitychange", retryInViewClips);
-      window.removeEventListener("scroll", onScrollOrResize);
-      window.removeEventListener("resize", onScrollOrResize);
       root.removeEventListener("canplay", onMediaReady);
       root.removeEventListener("loadeddata", onMediaReady);
       if (visibleClips > 0) {
@@ -441,10 +407,17 @@ export default function DebutantMoment({
     notifyInvitationUserActivation();
     const idx = Number(el.dataset.momentVideoIndex);
     void (async () => {
+      el.muted = true;
       try {
-        await playMomentVideoClip(el);
+        await el.play();
         if (videoSound) {
-          await tryUnmuteMomentVideo(el);
+          el.muted = false;
+          try {
+            await el.play();
+          } catch {
+            el.muted = true;
+            await el.play();
+          }
         }
       } catch {
         await playClipRef.current(el);
@@ -784,6 +757,13 @@ export default function DebutantMoment({
                         onPlaying={(e) => {
                           const video = e.currentTarget;
                           video.removeAttribute("poster");
+                          if (
+                            videoSound &&
+                            hasInvitationUserActivated() &&
+                            video.muted
+                          ) {
+                            video.muted = false;
+                          }
                           setPlayHintIndex((prev) => {
                             if (!prev[index]) return prev;
                             const next = { ...prev };
@@ -810,6 +790,13 @@ export default function DebutantMoment({
                       onPlaying={(e) => {
                         const video = e.currentTarget;
                         video.removeAttribute("poster");
+                        if (
+                          videoSound &&
+                          hasInvitationUserActivated() &&
+                          video.muted
+                        ) {
+                          video.muted = false;
+                        }
                         setPlayHintIndex((prev) => {
                           if (!prev[index]) return prev;
                           const next = { ...prev };
