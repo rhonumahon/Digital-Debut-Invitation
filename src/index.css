@@ -30,7 +30,17 @@ html, body {
 }
 
 html {
-  scroll-padding-top: 4.5rem;
+  scroll-padding-top: max(3.25rem, calc(env(safe-area-inset-top) + 2.5rem));
+}
+
+@media (min-width: 640px) {
+  html {
+    scroll-padding-top: 4.5rem;
+  }
+}
+
+.page-jump-bar {
+  -webkit-overflow-scrolling: touch;
 }
 
 .page-jump {
@@ -39,6 +49,8 @@ html {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
   color: #fff6e8;
   text-shadow: 0 1px 6px rgba(6, 16, 28, 0.9);
   padding: 0.35rem 0.15rem;

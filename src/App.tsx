@@ -35,6 +35,7 @@ import {
   notifyInvitationCelebrationVisible,
   startInvitationMomentVideoPreload,
 } from "./utils/momentVideoRegistry";
+import { useFitNavRow } from "./hooks/useFitSingleLineText";
 
 const INTRO_MUSIC = "/assets/intro.mp3";
 const FINALE_MUSIC = "/assets/last20sec.mp3";
@@ -95,6 +96,7 @@ declare global {
 }
 
 export default function App() {
+  const pageJumpBarRef = useRef<HTMLDivElement>(null);
   const [guestId, setGuestId] = useState<string | null>(() => readGuestSession());
   const [showEnvelope, setShowEnvelope] = useState(() => !readGuestSession());
   const [promptOpen, setPromptOpen] = useState(false);
@@ -107,6 +109,12 @@ export default function App() {
   const [formVersion, setFormVersion] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [finaleMusic, setFinaleMusic] = useState(() => Date.now() >= GOWN_CHANGE_AT - FINALE_LEAD_MS);
+
+  useFitNavRow(pageJumpBarRef, ".page-jump", {
+    maxPx: 14,
+    minPx: 9,
+    enabled: !showEnvelope,
+  });
   const audioRef = useRef<HTMLAudioElement | null>(
     typeof document === "undefined" ? null : document.getElementById("invitation-audio") as HTMLAudioElement | null,
   );
@@ -327,9 +335,12 @@ export default function App() {
       {!showEnvelope && (
         <nav
           aria-label="Page"
-          className="fixed inset-x-0 top-0 z-40 flex justify-center px-3 pt-[max(0.45rem,env(safe-area-inset-top))]"
+          className="fixed inset-x-0 top-0 z-40 flex justify-center px-2 pt-[max(0.35rem,env(safe-area-inset-top))] sm:px-3 sm:pt-[max(0.45rem,env(safe-area-inset-top))]"
         >
-          <div className="flex max-w-full flex-wrap items-center justify-center gap-x-4 gap-y-1">
+          <div
+            ref={pageJumpBarRef}
+            className="page-jump-bar flex w-full max-w-[100vw] flex-nowrap items-center justify-center gap-x-3 px-1 sm:gap-x-4 sm:px-0"
+          >
             <a href="#symbols" className="page-jump">Traditions</a>
             <a href="#venue" className="page-jump">Venue</a>
             <a href="#rsvp" className="page-jump">RSVP</a>
@@ -705,6 +716,36 @@ export default function App() {
             fit: "object-[center_42%]",
           },
         ]}
+      />
+
+      <DebutantMoment
+        image="/assets/images/debutant-karate-medals.jpg"
+        video="/assets/debutant-karate.mp4"
+        videoSound
+        stillAboveVideo
+        alt="Jaylyn Eirielle in karate gi holding a row of national competition medals and a trophy"
+        kicker="Karate Champion"
+        motto="Brown Belt First Class."
+        reason="Jaylyn trains in karate as a Brown Belt First Class. In national competitions, she has repeatedly stood on top—medals, trophies, and the discipline she carries into everything else."
+        flip
+        slides={[
+          {
+            src: "/assets/images/debutant-karate-medals.jpg",
+            alt: "Jaylyn Eirielle in karate gi holding a row of national competition medals and a trophy",
+            fit: "object-[center_35%]",
+          },
+        ]}
+      />
+
+      <DebutantMoment
+        image="/assets/images/debutant-singing.jpg"
+        video="/assets/debutant-singing-recital.mp4"
+        videoSound
+        alt="Jaylyn Eirielle performing at the BCHSA Music-Voice Students Recital"
+        kicker="In voice"
+        motto="BCHSA Music-Voice Students Recital."
+        reason="Jaylyn also performs as a music-voice student at BCHSA. At the Music-Voice Students Recital, she takes the stage with the same poise she brings to karate, honors, and everything else she pursues."
+        flip
       />
 
       <DebutantMoment

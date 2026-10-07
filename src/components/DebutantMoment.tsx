@@ -142,6 +142,8 @@ type DebutantMomentProps = {
    * use a higher-quality re-encode for real HD.
    */
   videoEnhance?: "off" | "subtle" | "vivid";
+  /** Show a still (slides) stacked above the clip; avoids duplicating it as the video poster. */
+  stillAboveVideo?: boolean;
 };
 
 export default function DebutantMoment({
@@ -171,9 +173,16 @@ export default function DebutantMoment({
   icePalaceDoorClose,
   hideGlobalPetalsWhileInView = false,
   videoEnhance = "off",
+  stillAboveVideo = false,
 }: DebutantMomentProps) {
   const videoSources = videos?.length ? videos : video ? [video] : [];
   const hasVideo = videoSources.length > 0;
+  const showSlideStack = Boolean(
+    slides?.length &&
+      !(hasVideo && slides.length === 1 && !stillAboveVideo),
+  );
+  const videoPoster = (index: number) =>
+    index === 0 && image && !showSlideStack ? image : undefined;
   const figureRef = useRef<HTMLElement>(null);
   const [crystalVideoEl, setCrystalVideoEl] = useState<HTMLVideoElement | null>(
     null,
@@ -709,7 +718,7 @@ export default function DebutantMoment({
       )}
       <Reveal className={`bronze-card mx-auto grid items-stretch gap-0 overflow-hidden rounded-3xl ${columns}`}>
         <figure ref={figureRef} className={`relative overflow-hidden ${flip ? "md:order-2" : ""}`}>
-          {slides && slides.length > 0 && (
+          {showSlideStack && (
             <div className={`relative overflow-hidden bg-[#07182e] ${hasVideo ? "aspect-[2/3]" : frame}`}>
               <FadeSlides slides={slides} />
             </div>
@@ -720,7 +729,7 @@ export default function DebutantMoment({
                   key={src}
                   data-video-pan-shell={panVideo ? "" : undefined}
                   className={`relative w-full overflow-hidden ${frame} ${
-                    slides?.length && index === 0
+                    showSlideStack && index === 0
                       ? "border-t border-[#f09060]/35"
                       : index > 0
                         ? "border-t border-[#f09060]/35"
@@ -736,7 +745,7 @@ export default function DebutantMoment({
                         ref={index === 0 ? setCrystalVideoEl : undefined}
                         data-moment-video-index={index}
                         src={src}
-                        poster={index === 0 ? image : undefined}
+                        poster={videoPoster(index)}
                         aria-label={alt}
                         className="debutant-moment-video debutant-moment-video--pan absolute inset-0 h-full w-full bg-[#07182e] object-cover object-center"
                         playsInline
@@ -769,7 +778,7 @@ export default function DebutantMoment({
                       ref={index === 0 ? setCrystalVideoEl : undefined}
                       data-moment-video-index={index}
                       src={src}
-                      poster={index === 0 ? image : undefined}
+                      poster={videoPoster(index)}
                       aria-label={alt}
                       className={`debutant-moment-video absolute inset-0 h-full w-full bg-[#07182e] object-cover object-center ${videoEnhanceClass}`.trim()}
                       playsInline

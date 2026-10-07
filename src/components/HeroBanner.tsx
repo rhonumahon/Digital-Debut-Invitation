@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useFitSingleLineText } from "../hooks/useFitSingleLineText";
 
 const NUMBER_GLINTS = [
   { left: "8%", top: "10%", size: 16, delay: 0.3, duration: 2.3, gold: true },
@@ -165,8 +166,29 @@ function useHeroMark(gownPhase: "copper" | "wiping" | "blue") {
 export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: boolean }) {
   const gownPhase = useCelebrationGown();
   const heroMark = useHeroMark(gownPhase);
+  const heroTitleFrameRef = useRef<HTMLDivElement>(null);
+  const heroNameRef = useRef<HTMLParagraphElement>(null);
+  const [compactHeroTitle, setCompactHeroTitle] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 639px)").matches
+      : false,
+  );
   const [petals, setPetals] = useState<Array<{ id: number; left: number; delay: number; duration: number; size: number }>>([]);
   const [sparkles, setSparkles] = useState<Array<{ id: number; left: number; top: number; delay: number; duration: number; size: number; gold: boolean }>>([]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const sync = () => setCompactHeroTitle(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useFitSingleLineText(heroTitleFrameRef, heroNameRef, {
+    maxPx: 45.6,
+    minPx: 24,
+    enabled: titlesVisible && compactHeroTitle,
+  });
 
   useEffect(() => {
     // Initialize 18 lovely floating rose petals drifting gently
@@ -253,8 +275,11 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
 
       {titlesVisible && (
         <>
-          <div className="hero-title-in absolute inset-x-0 top-[max(6%,calc(env(safe-area-inset-top)+2.75rem))] z-20 flex justify-center pointer-events-none px-6">
-            <div className="relative w-[min(92%,460px)] text-center">
+          <div className="hero-title-in absolute inset-x-0 top-[max(5%,calc(env(safe-area-inset-top)+2.5rem))] z-20 flex justify-center pointer-events-none px-4 sm:top-[max(6%,calc(env(safe-area-inset-top)+2.75rem))] sm:px-6">
+            <div
+              ref={heroTitleFrameRef}
+              className="hero-title-frame relative w-[min(92%,460px)] text-center"
+            >
               <div className="hero-name relative z-10 text-[#f3e2b4]">
                 <svg aria-hidden="true" className="mx-auto mb-1 h-7 w-14 text-[#f3e2b4]" viewBox="0 0 64 28" fill="none">
                   <path d="M6 22 L14 9 L24 18 L32 4 L40 18 L50 9 L58 22" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" />
@@ -264,7 +289,10 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
                   <circle cx="50" cy="9" r="1.2" fill="currentColor" />
                 </svg>
                 <div className="relative">
-                  <p className="relative font-fairytale text-[2.85rem] sm:text-7xl leading-none">
+                  <p
+                    ref={heroNameRef}
+                    className="hero-name-script relative font-fairytale text-[2.85rem] sm:text-7xl leading-none"
+                  >
                     Jaylyn Eirielle
                     <span aria-hidden="true" className="glass-reflect">Jaylyn Eirielle</span>
                   </p>
@@ -558,6 +586,10 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
           );
           filter: blur(16px);
           pointer-events: none;
+        }
+
+        .hero-name-script {
+          white-space: nowrap;
         }
 
         .hero-name .font-fairytale,
