@@ -734,6 +734,26 @@ export default function App() {
             alt: "Jaylyn Eirielle in karate gi holding a row of national competition medals and a trophy",
             fit: "object-[center_35%]",
           },
+          {
+            src: "/assets/images/debutant-karate-medals-celebration.jpg",
+            alt: "Jaylyn Eirielle in karate gi with rainbow medal ribbons, celebrating a win",
+            fit: "object-[center_40%]",
+          },
+          {
+            src: "/assets/images/debutant-karate-competition-ace.jpg",
+            alt: "Jaylyn Eirielle at a karate competition with medals, alongside family",
+            fit: "object-[center_45%]",
+          },
+          {
+            src: "/assets/images/debutant-karate-trophy-waltermart.jpg",
+            alt: "Jaylyn Eirielle holding a karate trophy with family at an awards moment",
+            fit: "object-[center_42%]",
+          },
+          {
+            src: "/assets/images/debutant-karate-championship-banner.jpg",
+            alt: "Jaylyn Eirielle at the Battle of Pure Traditional Karate Championship with medals and club flags",
+            fit: "object-[center_38%]",
+          },
         ]}
       />
 
