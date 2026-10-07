@@ -694,6 +694,7 @@ export default function App() {
         motto="She was Elsa, and the name stayed."
         reason="Jaylyn performed as Elsa in a stage play of Frozen. Soon, everyone who saw her at school called her Elsa."
         flip
+        stillAboveVideo
         slides={[
           {
             src: "/assets/images/debutant-elsa.jpg?v=2",
