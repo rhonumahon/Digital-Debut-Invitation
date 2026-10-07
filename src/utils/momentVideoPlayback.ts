@@ -4,6 +4,7 @@ const primed = new WeakSet<HTMLVideoElement>();
 export async function primeMomentVideo(el: HTMLVideoElement): Promise<boolean> {
   if (primed.has(el)) return true;
   el.muted = true;
+  el.dataset.momentPriming = "true";
 
   const run = async () => {
     await el.play();
@@ -31,6 +32,9 @@ export async function primeMomentVideo(el: HTMLVideoElement): Promise<boolean> {
       }
     }
     return false;
+  } finally {
+    delete el.dataset.momentPriming;
+    el.muted = true;
   }
 }
 
@@ -38,11 +42,8 @@ export function clearMomentVideoPrime(el: HTMLVideoElement) {
   primed.delete(el);
 }
 
-/** Muted play first (browser-friendly), then optional sound after user activation. */
-export async function playMomentVideoClip(
-  el: HTMLVideoElement,
-  withSound: boolean,
-): Promise<boolean> {
+/** Muted play only — callers unmute explicitly when the guest should hear the clip. */
+export async function playMomentVideoClip(el: HTMLVideoElement): Promise<boolean> {
   const tryMuted = async () => {
     el.muted = true;
     await el.play();
@@ -63,22 +64,25 @@ export async function playMomentVideoClip(
     }
   }
 
-  if (!withSound) {
-    return !el.paused;
-  }
+  return !el.paused;
+}
 
+/** Unmute after a user gesture or when the clip is clearly on screen (may still be blocked). */
+export async function tryUnmuteMomentVideo(el: HTMLVideoElement): Promise<boolean> {
+  if (el.dataset.momentPriming === "true") return false;
   try {
     el.muted = false;
     await el.play();
+    return !el.muted && !el.paused;
   } catch {
     el.muted = true;
     try {
       await el.play();
     } catch {
-      /* keep muted attempt below */
+      /* stay muted */
     }
+    return false;
   }
-  return !el.paused;
 }
 
 export function isMomentVideoActuallyPlaying(el: HTMLVideoElement): boolean {
