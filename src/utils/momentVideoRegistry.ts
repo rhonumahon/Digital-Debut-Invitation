@@ -5,10 +5,37 @@ const pool = new Map<string, HTMLVideoElement>();
 let preloadStarted = false;
 let userHasActivated = false;
 
+const MEDIA_ACTIVATION_KEY = "jaylyn-invitation-media-activated";
+
 export const INVITATION_CELEBRATION_VISIBLE = "invitation-celebration-visible";
 
+function readPersistedMediaActivation() {
+  try {
+    return localStorage.getItem(MEDIA_ACTIVATION_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function persistMediaActivation() {
+  try {
+    localStorage.setItem(MEDIA_ACTIVATION_KEY, "1");
+  } catch {
+    /* storage blocked */
+  }
+}
+
 export function hasInvitationUserActivated() {
-  return userHasActivated;
+  return userHasActivated || readPersistedMediaActivation();
+}
+
+export function clearInvitationMediaActivation() {
+  userHasActivated = false;
+  try {
+    localStorage.removeItem(MEDIA_ACTIVATION_KEY);
+  } catch {
+    /* storage blocked */
+  }
 }
 
 export function notifyInvitationCelebrationVisible() {
@@ -36,6 +63,7 @@ export function startInvitationMomentVideoPreload() {
 export function primeAllInvitationMomentVideos() {
   if (typeof document === "undefined") return;
   userHasActivated = true;
+  persistMediaActivation();
 
   const seen = new Set<HTMLVideoElement>();
 

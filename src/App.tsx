@@ -32,6 +32,7 @@ import {
   notifyInvitationUserActivation,
 } from "./contexts/InvitationAudioContext";
 import {
+  clearInvitationMediaActivation,
   notifyInvitationCelebrationVisible,
   startInvitationMomentVideoPreload,
 } from "./utils/momentVideoRegistry";
@@ -269,11 +270,15 @@ export default function App() {
   useEffect(() => {
     if (showEnvelope) return;
     startInvitationMomentVideoPreload();
+    if (readGuestSession()) {
+      notifyInvitationUserActivation();
+    }
     notifyInvitationCelebrationVisible();
   }, [showEnvelope]);
 
   const returnToEnvelope = () => {
     clearGuestSession();
+    clearInvitationMediaActivation();
     preparingGuest.current = null;
     setGuestId(null);
     setPromptGuestId(null);
@@ -762,7 +767,7 @@ export default function App() {
         video="/assets/debutant-singing-recital.mp4"
         videoSound
         alt="Jaylyn Eirielle performing at the BCHSA Music-Voice Students Recital"
-        kicker="In voice"
+        kicker="In music and voice"
         motto="BCHSA Music-Voice Students Recital."
         reason="Jaylyn also performs as a music-voice student at BCHSA. At the Music-Voice Students Recital, she takes the stage with the same poise she brings to karate, honors, and everything else she pursues."
         flip

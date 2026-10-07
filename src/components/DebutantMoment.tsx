@@ -288,10 +288,15 @@ export default function DebutantMoment({
       });
     };
 
-    const retryInViewClips = () => {
+    const resumeInViewClips = () => {
       clips.forEach((el) => {
-        if ((clipInView.get(el) ?? false) && el.paused) {
+        if (!(clipInView.get(el) ?? false)) return;
+        if (el.paused) {
           void playClip(el);
+          return;
+        }
+        if (el.muted && mayAutoUnmuteClip(el)) {
+          void tryUnmuteMomentVideo(el);
         }
       });
     };
@@ -303,7 +308,7 @@ export default function DebutantMoment({
       clips.forEach((el) => {
         void primeMomentVideo(el);
       });
-      retryInViewClips();
+      resumeInViewClips();
       syncProminentUnmute();
     };
 
@@ -405,7 +410,14 @@ export default function DebutantMoment({
 
     window.addEventListener(INVITATION_USER_ACTIVATED, onUserActivated);
     window.addEventListener(INVITATION_CELEBRATION_VISIBLE, onCelebrationVisible);
-    document.addEventListener("visibilitychange", retryInViewClips);
+    const onVisibilityOrPageShow = () => {
+      if (document.visibilityState !== "visible") return;
+      resumeInViewClips();
+      syncProminentUnmute();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityOrPageShow);
+    window.addEventListener("pageshow", onVisibilityOrPageShow);
     window.addEventListener("scroll", onScrollOrResize, { passive: true });
     window.addEventListener("resize", onScrollOrResize);
 
@@ -415,7 +427,8 @@ export default function DebutantMoment({
         INVITATION_CELEBRATION_VISIBLE,
         onCelebrationVisible,
       );
-      document.removeEventListener("visibilitychange", retryInViewClips);
+      document.removeEventListener("visibilitychange", onVisibilityOrPageShow);
+      window.removeEventListener("pageshow", onVisibilityOrPageShow);
       window.removeEventListener("scroll", onScrollOrResize);
       window.removeEventListener("resize", onScrollOrResize);
       root.removeEventListener("canplay", onMediaReady);
