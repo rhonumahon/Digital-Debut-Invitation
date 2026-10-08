@@ -584,7 +584,8 @@ export default function App() {
           {
             src: "/assets/images/debutant-honors-shs-poster.jpg",
             alt: "Senior high recognition for Jaylyn Eirielle with high honors",
-            fit: "object-[center_30%]",
+            contain: true,
+            backdropClass: "honors-shs-poster-frame",
           },
         ]}
       />

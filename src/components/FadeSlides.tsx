@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 
-type Slide = {
+export type FadeSlide = {
   src: string;
   alt: string;
   fit?: string;
+  /** Fit full width in portrait; letterbox top/bottom instead of cropping. */
+  contain?: boolean;
+  backdropClass?: string;
 };
 
-export default function FadeSlides({ slides }: { slides: Slide[] }) {
+export default function FadeSlides({ slides }: { slides: FadeSlide[] }) {
   const [slideIndex, setSlideIndex] = useState(0);
   const [holdIndex, setHoldIndex] = useState(0);
   const slideKey = slides.map((item) => item.src).join("|");
@@ -38,12 +41,18 @@ export default function FadeSlides({ slides }: { slides: Slide[] }) {
           <div
             key={item.src}
             aria-hidden={!on}
-            className={`fade-slide${on ? " is-on" : ""}${hold ? " is-hold" : ""}`}
+            className={`fade-slide${on ? " is-on" : ""}${hold ? " is-hold" : ""}${
+              item.backdropClass ? ` ${item.backdropClass}` : ""
+            }`}
           >
             <img
               src={item.src}
               alt={item.alt}
-              className={`h-full w-full object-cover ${item.fit ?? "object-center"}`}
+              className={
+                item.contain
+                  ? "h-full w-full object-contain object-center"
+                  : `h-full w-full object-cover ${item.fit ?? "object-center"}`
+              }
             />
           </div>
         );

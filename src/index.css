@@ -220,6 +220,18 @@ html {
   backface-visibility: hidden;
 }
 
+/* Landscape SHS poster — full width in portrait carousel, warm letterbox. */
+.honors-shs-poster-frame {
+  background: linear-gradient(
+    180deg,
+    #6b3410 0%,
+    #b85a22 22%,
+    #e08a38 48%,
+    #b85a22 78%,
+    #5c2e0e 100%
+  );
+}
+
 .fade-slide.is-hold {
   opacity: 1;
 }

@@ -54,6 +54,8 @@ type Slide = {
   src: string;
   alt: string;
   fit?: string;
+  contain?: boolean;
+  backdropClass?: string;
 };
 
 export type VideoPanKeyframe = {
