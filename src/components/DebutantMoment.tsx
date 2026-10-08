@@ -536,8 +536,6 @@ export default function DebutantMoment({
           const rh = Number.parseFloat(layoutProbe.height);
           box = { cw, ch, vw, vh, rw, rh };
           coverBoxCache.set(el, box);
-          panLayer.style.width = layoutProbe.width;
-          panLayer.style.height = layoutProbe.height;
         }
 
         const layout = panLayerLayoutStyle(
@@ -547,10 +545,13 @@ export default function DebutantMoment({
           vw,
           vh,
         );
-        if (lastPanTransform.get(panLayer) !== layout.transform) {
+        const layoutKey = `${layout.width}|${layout.height}|${layout.transform}`;
+        if (lastPanTransform.get(panLayer) !== layoutKey) {
+          panLayer.style.width = layout.width;
+          panLayer.style.height = layout.height;
           panLayer.style.transformOrigin = layout.transformOrigin;
           panLayer.style.transform = layout.transform;
-          lastPanTransform.set(panLayer, layout.transform);
+          lastPanTransform.set(panLayer, layoutKey);
         }
       }
 

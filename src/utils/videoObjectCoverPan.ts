@@ -79,10 +79,11 @@ export function panLayerLayoutStyle(
     mediaWidth,
     mediaHeight,
   );
-  const left = (state.xPercent / 100) * (containerWidth - rw);
-  const top = (state.yPercent / 100) * (containerHeight - rh);
-  const origin = `${state.xPercent}% ${state.yPercent}%`;
-  const scale = state.scale;
+  const zoom = Math.max(1, state.scale || 1);
+  const scaledRw = rw * zoom;
+  const scaledRh = rh * zoom;
+  const left = (state.xPercent / 100) * (containerWidth - scaledRw);
+  const top = (state.yPercent / 100) * (containerHeight - scaledRh);
 
   if (rw <= 0 || rh <= 0) {
     return {
@@ -93,14 +94,12 @@ export function panLayerLayoutStyle(
     };
   }
 
-  const zoom = scale > 1.001 ? ` scale(${scale})` : "";
-  const transform = `translate3d(${left}px, ${top}px, 0)${zoom}`;
-
+  /* Bake zoom into box size + translate (CSS scale + off-center origin left gaps). */
   return {
-    width: `${rw}px`,
-    height: `${rh}px`,
-    transform,
-    transformOrigin: origin,
+    width: `${scaledRw}px`,
+    height: `${scaledRh}px`,
+    transform: `translate3d(${left}px, ${top}px, 0)`,
+    transformOrigin: "0 0",
   };
 }
 
