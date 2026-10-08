@@ -313,9 +313,6 @@ html {
 }
 [data-video-pan-shell] {
   contain: layout style paint;
-  /* Clip scaled pan layer so shell background never shows at the edges. */
-  overflow: hidden;
-  background-color: #07182e;
 }
 
 .debutant-moment-video-pan-inner {

@@ -181,7 +181,7 @@ export default function VideoTimedBackdropOverlay({
         style={{
           objectPosition: `50% ${objectY}%`,
           transform: backdropTransform(coverScale, offsetUpCm, offsetLeftCm),
-          transformOrigin: `${50}% ${objectY}%`,
+          transformOrigin: "center center",
         }}
       />
     </div>

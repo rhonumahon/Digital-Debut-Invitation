@@ -608,7 +608,6 @@ export default function App() {
           coverScale: 1.42,
           objectPositionY: 48,
           offsetUpCm: 1,
-          offsetLeftCm: 2,
         }}
         videoEdgeBeams={{
           start: 8,
