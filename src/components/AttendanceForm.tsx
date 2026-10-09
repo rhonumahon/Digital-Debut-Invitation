@@ -265,7 +265,7 @@ export default function AttendanceForm({ guestId, reloadToken = 0, onSaved, show
           <p className="font-garamond text-base text-[#8a5a32] mt-1 leading-snug">Angelitos Event Center<br />Batangas City</p>
           {actor.tableNumber != null && actor.chairNumber != null && (
             <p className="font-cinzel text-sm tracking-[0.14em] uppercase text-[#7a3e18] mt-3">
-              Table {actor.tableNumber} · Chair {actor.chairNumber}
+              Table {actor.tableNumber} · Chair no. {actor.chairNumber}
             </p>
           )}
         </div>
@@ -281,7 +281,7 @@ export default function AttendanceForm({ guestId, reloadToken = 0, onSaved, show
               <p className="font-garamond text-lg text-[#5c3418]">{member.fullName}</p>
               {member.tableNumber != null && member.chairNumber != null && (
                 <p className="font-cinzel text-[13px] tracking-[0.12em] uppercase text-[#7a3e18] mt-1">
-                  Table {member.tableNumber} · Chair {member.chairNumber}
+                  Table {member.tableNumber} · Chair no. {member.chairNumber}
                 </p>
               )}
               <p className="font-cinzel text-[13px] tracking-[0.12em] uppercase text-[#a8642c] mb-3 mt-1">

@@ -115,8 +115,8 @@ function ChairCircle({ rows, tableNumber, size, onPick }: { rows: Record<Role, R
               <button
                 key={number}
                 type="button"
-                title={`Chair ${number} is open`}
-                aria-label={`Choose a guest for chair ${number}`}
+                title={`Chair no. ${number} is open`}
+                aria-label={`Choose a guest for chair no. ${number}`}
                 onClick={() => onPick(number)}
                 className="absolute flex w-9 -translate-x-1/2 -translate-y-1/2 cursor-pointer flex-col items-center"
                 style={place}
@@ -128,7 +128,7 @@ function ChairCircle({ rows, tableNumber, size, onPick }: { rows: Record<Role, R
           return (
             <div
               key={number}
-              title={`Chair ${number} · ${name}`}
+              title={`Chair no. ${number} · ${name}`}
               className="absolute flex w-9 -translate-x-1/2 -translate-y-1/2 flex-col items-center"
               style={place}
             >
@@ -343,7 +343,7 @@ export default function AdminPage() {
     setRows(nextRows);
     setSeatPick(null);
     setSeatQuery("");
-    saveMessage.current = `${choice.fullName} is seated at table ${table}, chair ${chair}.`;
+    saveMessage.current = `${choice.fullName} is seated at table ${table}, chair no. ${chair}.`;
     saveDirty.current = true;
     flushSave();
   };
@@ -373,7 +373,7 @@ export default function AdminPage() {
     <main className="min-h-screen bg-[#07182e] text-[#f6f0e6] px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="font-playfair text-3xl text-[#f09060] italic text-center">Invitation list</h1>
-        <p className="text-center font-garamond text-sm text-[#f0d2b0] mt-2">Give people the same family label when one of them should answer for the others. Each guest can have one table and chair. Changes save on their own.</p>
+        <p className="text-center font-garamond text-sm text-[#f0d2b0] mt-2">Give people the same family label when one of them should answer for the others. Each guest can have one table number and chair number. Changes save on their own.</p>
         <div className="mt-6 flex justify-center gap-2" role="tablist" aria-label="Invitation list view">
           {([["roles", "Per role"], ["tables", "Per table"]] as const).map(([id, label]) => (
             <button
@@ -448,7 +448,7 @@ export default function AdminPage() {
                 <li key={`${person.role}-${person.index}`} className="rounded-lg border border-[#f09060]/25 px-3 py-2">
                   <div className="flex items-baseline justify-between gap-3">
                     <p className="font-garamond text-base text-[#f6f0e6]">{person.fullName}</p>
-                    <p className="shrink-0 font-cinzel text-[10px] uppercase tracking-[0.14em] text-[#f09060]">Chair {person.chair}</p>
+                    <p className="shrink-0 font-cinzel text-[10px] uppercase tracking-[0.14em] text-[#f09060]">Chair no. {person.chair}</p>
                   </div>
                   <p className="mt-0.5 font-cinzel text-[10px] uppercase tracking-[0.14em] text-[#f0d2b0]">
                     {ROLE_LABEL[person.role]}
@@ -469,7 +469,7 @@ export default function AdminPage() {
               <span>Name</span>
               <span>Family</span>
               <span>Table</span>
-              <span>Chair</span>
+              <span>Chair no.</span>
               <span>Answer</span>
             </div>
             <div className="space-y-2">
@@ -509,7 +509,7 @@ export default function AdminPage() {
                   <input
                     value={row.chair}
                     inputMode="numeric"
-                    placeholder="Chair"
+                    placeholder="No."
                     onChange={(event) => editRows((current) => ({
                       ...current,
                       [role]: current[role].map((item, itemIndex) => itemIndex === index ? { ...item, chair: event.target.value.replace(/[^\d]/g, "") } : item),
@@ -551,7 +551,7 @@ export default function AdminPage() {
               className="flex max-h-[80vh] w-full max-w-md flex-col rounded-3xl border border-[#f09060]/40 bg-[#07182e] p-5"
               onClick={(event) => event.stopPropagation()}
             >
-              <h2 id="seat-picker-title" className="font-playfair text-2xl italic text-[#f09060]">Table {seatPick.table} · Chair {seatPick.chair}</h2>
+              <h2 id="seat-picker-title" className="font-playfair text-2xl italic text-[#f09060]">Table {seatPick.table} · Chair no. {seatPick.chair}</h2>
               <p className="mt-1 font-garamond text-sm text-[#f0d2b0]">Choose who sits here.</p>
               <input
                 value={seatQuery}
@@ -572,7 +572,7 @@ export default function AdminPage() {
                     <span className="block font-garamond text-base text-[#f6f0e6]">{choice.fullName}</span>
                     <span className="block font-cinzel text-[10px] uppercase tracking-[0.14em] text-[#f09060]">
                       {ROLE_LABEL[choice.role]}
-                      {choice.table && choice.chair ? ` · Table ${choice.table} · Chair ${choice.chair}` : ""}
+                      {choice.table && choice.chair ? ` · Table ${choice.table} · Chair no. ${choice.chair}` : ""}
                     </span>
                   </button>
                 ))}

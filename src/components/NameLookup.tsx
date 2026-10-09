@@ -75,7 +75,7 @@ export default function NameLookup({ onChange, tone = "page" }: NameLookupProps)
               >
                 <span className={`block font-garamond text-base ${onCard ? "text-[#f6f0e6]" : "text-[#5c3418]"}`}>{match.fullName}</span>
                 {match.tableNumber != null && match.chairNumber != null && (
-                  <span className="block font-cinzel text-[13px] tracking-[0.12em] uppercase text-[#f09060]">Table {match.tableNumber} · Chair {match.chairNumber}</span>
+                  <span className="block font-cinzel text-[13px] tracking-[0.12em] uppercase text-[#f09060]">Table {match.tableNumber} · Chair no. {match.chairNumber}</span>
                 )}
               </button>
             </li>
