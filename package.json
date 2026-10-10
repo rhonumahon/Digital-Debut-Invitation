@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "qr": "node scripts/generate-invitation-qr.mjs"
+    "qr": "node scripts/generate-invitation-qr.mjs",
+    "audio:devices": "bash scripts/record-system-audio.sh list",
+    "audio:capture": "bash scripts/record-system-audio.sh capture"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

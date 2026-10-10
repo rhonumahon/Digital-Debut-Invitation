@@ -4,31 +4,12 @@
  */
 
 import React from "react";
+import { useDebutProgram } from "../hooks/useDebutProgram";
 import Reveal from "./Reveal";
 
 export default function ProgramCard() {
-  const programSteps: { title: string; note?: string }[] = [
-    { title: "Welcome & Introduction" },
-    { title: "Grand Entrance — Jaylyn", note: "Prayer, then a welcome speech by Daddy Ipe" },
-    { title: "18 Roses" },
-    { title: "18 Fashion Pieces" },
-    { title: "Game 1", note: "A moment for guests to enjoy" },
-    { title: "18 Glam" },
-    { title: "18 Treasures" },
-    { title: "Game 2", note: "Jaylyn changes from her ball gown into her dance outfit" },
-    { title: "Jaylyn’s Production Number", note: "First performance" },
-    { title: "18 Bills", note: "A short pause after the performance" },
-    { title: "Game 3", note: "Costume change for the kata" },
-    { title: "Jaylyn’s Kata Performance", note: "Second performance" },
-    { title: "Dinner", note: "Around 7 PM. Jaylyn may change while guests dine" },
-    { title: "Jaylyn’s Solo Song Number", note: "Third performance" },
-    { title: "Intermission", note: "Tito Miko & Sandy" },
-    { title: "Special Messages & Wishes", note: "Sei Cora, Moi & Erika, Aldrich, Mama, and Mommy" },
-    { title: "Jaylyn’s Birthday Speech" },
-    { title: "Cake Presentation" },
-    { title: "Candle Blowing" },
-    { title: "Final Photos & Closing" },
-  ];
+  const { state } = useDebutProgram();
+  const programSteps = state.steps;
 
   return (
     <div className="group relative overflow-hidden p-4 sm:p-8 md:p-12 w-full flex flex-col items-center">
@@ -86,7 +67,7 @@ export default function ProgramCard() {
                   <span className="font-playfair timeline-ink text-base sm:text-lg text-white italic font-bold transition-colors select-none leading-tight block">
                     {step.title}
                   </span>
-                  {step.note && (
+                  {step.note.trim() && (
                     <span className="font-garamond timeline-ink text-base text-white not-italic font-medium leading-snug block mt-1">
                       {step.note}
                     </span>
@@ -96,7 +77,7 @@ export default function ProgramCard() {
 
               return (
                 <Reveal
-                  key={idx}
+                  key={step.id}
                   delay={idx * 0.06}
                   y={14}
                   x={isEven ? -22 : 22}

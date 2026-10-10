@@ -121,7 +121,7 @@ export default function EventCountdown() {
   const timeLeft = calculateTimeLeft(now.getTime());
 
   return (
-    <div className="relative z-20 w-full flex flex-col items-center py-12 px-6">
+    <div id="countdown" className="relative z-20 w-full flex flex-col items-center py-12 px-6 scroll-mt-24">
       <SectionFlourish />
 
       {/* Elegant Date Divider */}
