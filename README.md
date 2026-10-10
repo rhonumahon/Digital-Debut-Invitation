@@ -12,7 +12,7 @@ paintings and regency elegance of the Bridgerton aesthetic, this project blends
 traditional formal stationery design with modern interactive front-end web
 engineering.
 
-Live Link: https://trisha-digital-invitation.vercel.app/
+Live Link: https://mydigitalinvitation.netlify.app/
 
 🌸 Key Features
 
