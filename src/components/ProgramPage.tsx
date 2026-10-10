@@ -32,6 +32,7 @@ type MusicModalState = { stepId: string; title: string } | null;
 type VideoModalState = { stepId: string; title: string } | null;
 type TitleModalState = { stepId: string; draft: string } | null;
 type ActiveVideo = { id: string; label: string; fileName: string; url: string };
+type RepeatMode = "off" | "one" | "playlist";
 
 export default function ProgramPage() {
   const { state, persist } = useDebutProgram();
@@ -50,6 +51,10 @@ export default function ProgramPage() {
   const objectUrlRef = useRef<string | null>(null);
   const videoObjectUrlRef = useRef<string | null>(null);
   const playlistQueueRef = useRef<{ ids: string[]; segmentLabel: string } | null>(null);
+  const playlistSourceRef = useRef<{ ids: string[]; segmentLabel: string } | null>(null);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
+  const repeatModeRef = useRef<RepeatMode>("off");
+  repeatModeRef.current = repeatMode;
   const [musicPickId, setMusicPickId] = useState("");
 
   const refreshTracks = useCallback(async () => {
@@ -124,6 +129,7 @@ export default function ProgramPage() {
       objectUrlRef.current = url;
       const audio = audioRef.current;
       if (!audio) return;
+      audio.loop = repeatModeRef.current === "one";
       audio.src = url;
       audio.load();
       await audio.play();
@@ -135,6 +141,7 @@ export default function ProgramPage() {
 
   const playTrack = useCallback(
     (trackId: string, label: string) => {
+      playlistSourceRef.current = { ids: [trackId], segmentLabel: label };
       playlistQueueRef.current = null;
       void playTrackById(trackId, label);
     },
@@ -144,6 +151,7 @@ export default function ProgramPage() {
   const playSegmentPlaylist = useCallback(
     (step: ProgramStep) => {
       if (!step.trackIds.length) return;
+      playlistSourceRef.current = { ids: [...step.trackIds], segmentLabel: step.title };
       const [first, ...rest] = step.trackIds;
       playlistQueueRef.current = rest.length ? { ids: rest, segmentLabel: step.title } : null;
       void playTrackById(first, step.title);
@@ -151,17 +159,37 @@ export default function ProgramPage() {
     [playTrackById],
   );
 
+  const cycleRepeatMode = () => {
+    setRepeatMode((mode) => {
+      const next: RepeatMode = mode === "off" ? "one" : mode === "one" ? "playlist" : "off";
+      const audio = audioRef.current;
+      if (audio) audio.loop = next === "one";
+      return next;
+    });
+  };
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
     const onEnded = () => {
+      if (repeatModeRef.current === "one") {
+        setIsPlaying(true);
+        return;
+      }
       const queue = playlistQueueRef.current;
       if (queue?.ids.length) {
         const [next, ...rest] = queue.ids;
         playlistQueueRef.current = rest.length ? { ids: rest, segmentLabel: queue.segmentLabel } : null;
         void playTrackById(next, queue.segmentLabel);
+        return;
+      }
+      const source = playlistSourceRef.current;
+      if (repeatModeRef.current === "playlist" && source && source.ids.length > 0) {
+        const [first, ...rest] = source.ids;
+        playlistQueueRef.current = rest.length ? { ids: rest, segmentLabel: source.segmentLabel } : null;
+        void playTrackById(first, source.segmentLabel);
         return;
       }
       playlistQueueRef.current = null;
@@ -758,6 +786,25 @@ export default function ProgramPage() {
             aria-label={isPlaying ? "Pause" : "Play"}
           >
             {isPlaying ? "❚❚" : "▶"}
+          </button>
+          <button
+            type="button"
+            onClick={cycleRepeatMode}
+            className={`font-cinzel text-[10px] tracking-wider uppercase min-w-[3.25rem] px-2 py-2 rounded-full border transition-colors ${
+              repeatMode === "off"
+                ? "border-[#f09060]/35 text-[#f0d2b0]/80"
+                : "border-[#f09060] bg-[#f09060]/15 text-[#f6f0e6]"
+            }`}
+            aria-label={`Repeat ${repeatMode === "off" ? "off" : repeatMode === "one" ? "one track" : "playlist"}`}
+            title={
+              repeatMode === "off"
+                ? "Repeat off — tap to loop one track"
+                : repeatMode === "one"
+                  ? "Repeat one track — tap to loop playlist"
+                  : "Repeat playlist — tap to turn off"
+            }
+          >
+            {repeatMode === "one" ? "↻1" : repeatMode === "playlist" ? "↻∞" : "↻"}
           </button>
           <div className="min-w-0 flex-1">
             <p className="font-playfair text-sm text-[#f6f0e6] truncate">{nowPlaying?.label ?? "Nothing playing"}</p>
