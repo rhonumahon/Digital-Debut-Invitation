@@ -34,6 +34,9 @@ type TitleModalState = { stepId: string; draft: string } | null;
 type ActiveVideo = { id: string; label: string; fileName: string; url: string };
 type RepeatMode = "off" | "one" | "playlist";
 
+const PROGRAM_FULL_VOLUME = 1;
+const PROGRAM_DUCK_VOLUME = 0.28;
+
 export default function ProgramPage() {
   const { state, persist } = useDebutProgram();
   const [tracks, setTracks] = useState<ProgramTrack[]>([]);
@@ -55,6 +58,9 @@ export default function ProgramPage() {
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
   const repeatModeRef = useRef<RepeatMode>("off");
   repeatModeRef.current = repeatMode;
+  const [hostDuck, setHostDuck] = useState(false);
+  const hostDuckRef = useRef(false);
+  hostDuckRef.current = hostDuck;
   const [musicPickId, setMusicPickId] = useState("");
 
   const refreshTracks = useCallback(async () => {
@@ -130,6 +136,7 @@ export default function ProgramPage() {
       const audio = audioRef.current;
       if (!audio) return;
       audio.loop = repeatModeRef.current === "one";
+      audio.volume = hostDuckRef.current ? PROGRAM_DUCK_VOLUME : PROGRAM_FULL_VOLUME;
       audio.src = url;
       audio.load();
       await audio.play();
@@ -158,6 +165,18 @@ export default function ProgramPage() {
     },
     [playTrackById],
   );
+
+  const toggleHostDuck = () => {
+    setHostDuck((ducked) => {
+      const next = !ducked;
+      hostDuckRef.current = next;
+      const audio = audioRef.current;
+      if (audio) {
+        audio.volume = next ? PROGRAM_DUCK_VOLUME : PROGRAM_FULL_VOLUME;
+      }
+      return next;
+    });
+  };
 
   const cycleRepeatMode = () => {
     setRepeatMode((mode) => {
@@ -805,6 +824,23 @@ export default function ProgramPage() {
             }
           >
             {repeatMode === "one" ? "↻1" : repeatMode === "playlist" ? "↻∞" : "↻"}
+          </button>
+          <button
+            type="button"
+            onClick={toggleHostDuck}
+            className={`font-cinzel text-[10px] tracking-wider uppercase min-w-[3.25rem] px-2 py-2 rounded-full border transition-colors ${
+              hostDuck
+                ? "border-[#f09060] bg-[#f09060]/25 text-[#f6f0e6]"
+                : "border-[#f09060]/35 text-[#f0d2b0]/80 hover:border-[#f09060]/60"
+            }`}
+            aria-pressed={hostDuck}
+            title={
+              hostDuck
+                ? "Music at 28% — tap to restore full volume"
+                : "Lower music to 28% while the host is speaking"
+            }
+          >
+            {hostDuck ? "Full" : "28%"}
           </button>
           <div className="min-w-0 flex-1">
             <p className="font-playfair text-sm text-[#f6f0e6] truncate">{nowPlaying?.label ?? "Nothing playing"}</p>
