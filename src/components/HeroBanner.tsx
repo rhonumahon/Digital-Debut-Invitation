@@ -96,17 +96,6 @@ const CHANGE_GLINTS = Array.from({ length: 96 }, (_, id) => ({
   dot: id % 4 === 0,
 }));
 
-const CHANGE_ORBS = [
-  { id: "o1", left: 8, top: 18, size: 112, delay: 0.05, duration: 1.7, gold: true },
-  { id: "o2", left: 30, top: 56, size: 78, delay: 0.4, duration: 2.05, gold: false },
-  { id: "o3", left: 52, top: 14, size: 96, delay: 0.15, duration: 1.85, gold: true },
-  { id: "o4", left: 74, top: 48, size: 128, delay: 0.28, duration: 1.65, gold: true },
-  { id: "o5", left: 18, top: 74, size: 70, delay: 0.7, duration: 2.15, gold: false },
-  { id: "o6", left: 42, top: 36, size: 104, delay: 0.55, duration: 1.9, gold: true },
-  { id: "o7", left: 88, top: 24, size: 84, delay: 0.22, duration: 1.75, gold: false },
-  { id: "o8", left: 62, top: 70, size: 92, delay: 0.85, duration: 2.1, gold: true },
-];
-
 const PETAL_FILLS = [
   "radial-gradient(ellipse at 35% 30%, #f0c48a, #d4894a 42%, #b87333)",
   "radial-gradient(ellipse at 35% 30%, #f2b56a, #e07a3d 40%, #c45a22)",
@@ -219,43 +208,20 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
       className="relative h-dvh w-full overflow-hidden flex flex-col justify-start bg-[#06101c]" 
       id="hero"
     >
-      <div
-        className="hero-scene absolute inset-0 z-0"
-        style={{ backgroundImage: `url('${GOWN_COPPER}')` }}
-      />
+      {(gownPhase === "copper" || gownPhase === "wiping") && (
+        <div
+          className="hero-scene absolute inset-0 z-0"
+          style={{ backgroundImage: `url('${GOWN_COPPER}')` }}
+        />
+      )}
       {gownPhase !== "copper" && (
-        <div className={`absolute inset-0 z-0 ${gownPhase === "wiping" ? "gown-wipe" : ""}`}>
+        <div className={`absolute inset-0 z-0 ${gownPhase === "wiping" ? "gown-wipe" : "gown-wipe-settled"}`}>
           <img src={GOWN_BLUE} alt="" className="hero-gown" />
         </div>
       )}
       {gownPhase === "wiping" && (
         <div className="gown-magic absolute inset-0 z-[15] overflow-hidden pointer-events-none" aria-hidden="true">
-          <div className="gown-edge">
-            <div className="gown-feather" aria-hidden="true">
-              <div className="gown-feather-blur">
-                <div className="gown-feather-shift">
-                  <img src={GOWN_BLUE} alt="" className="hero-gown" />
-                </div>
-              </div>
-            </div>
-            <div className="gown-haze" />
-            <div className="gown-shimmer" />
-          </div>
           <div className="gown-edge gown-sparks">
-            {CHANGE_ORBS.map((orb) => (
-              <span
-                key={orb.id}
-                className={`change-orb ${orb.gold ? "gold" : ""}`}
-                style={{
-                  left: `${orb.left}%`,
-                  top: `${orb.top}%`,
-                  width: `${orb.size}px`,
-                  height: `${orb.size}px`,
-                  animationDuration: `${orb.duration}s`,
-                  animationDelay: `${orb.delay}s`,
-                }}
-              />
-            ))}
             {CHANGE_GLINTS.map((glint) => (
               <span
                 key={glint.id}
@@ -324,7 +290,6 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
                       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                         <p className="hero-eighteen font-playfair text-[3.2rem] sm:text-6xl leading-none tracking-[0.06em] text-[#f3e2b4] mark-enter">
                           18
-                          <span aria-hidden="true" className="glass-reflect late">18</span>
                         </p>
                       </div>
                     </>
@@ -334,7 +299,6 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
                       className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-playfair leading-none tabular-nums ${heroMark.kind === "eighteen" ? "hero-eighteen text-[3.2rem] sm:text-6xl tracking-[0.06em] text-[#f3e2b4]" : `hero-countdown${heroMark.kind === "clock" ? "" : " hero-countdown-digit"}`}`}
                     >
                       {heroMark.text}
-                      <span aria-hidden="true" className="glass-reflect late">{heroMark.text}</span>
                     </p>
                   )}
                   {NUMBER_GLINTS.map((glint, index) => (
@@ -655,9 +619,8 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
           letter-spacing: 0;
         }
 
-        .hero-countdown .glass-reflect {
-          -webkit-text-stroke: 0;
-          text-shadow: none;
+        .hero-mark-slot .glass-reflect {
+          display: none;
         }
 
         @media (min-width: 640px) {
@@ -745,79 +708,52 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
           16% { opacity: 0; transform: translate3d(0, 0, 0) scale(0.45) rotate(28deg); }
         }
 
+        /* Soft top→bottom reveal: transparent below the moving edge, opaque above (copper shows through mask holes). */
         .gown-wipe {
-          -webkit-clip-path: inset(0 0 100% 0);
-          clip-path: inset(0 0 100% 0);
-          -webkit-animation: gownWipe ${WIPE_SECONDS}s linear forwards;
-          animation: gownWipe ${WIPE_SECONDS}s linear forwards;
-          will-change: clip-path;
-        }
-
-        @-webkit-keyframes gownWipe {
-          0%, 17% { -webkit-clip-path: inset(0 0 100% 0); clip-path: inset(0 0 100% 0); }
-          87%, 100% { -webkit-clip-path: inset(0 0 0 0); clip-path: inset(0 0 0 0); }
-        }
-
-        @keyframes gownWipe {
-          0%, 17% { clip-path: inset(0 0 100% 0); }
-          87%, 100% { clip-path: inset(0 0 0 0); }
-        }
-
-        .gown-feather {
-          position: absolute;
-          inset: -8% 0 -42%;
           -webkit-mask-image: linear-gradient(
             to bottom,
-            transparent 0%,
-            transparent 8%,
-            #000 18%,
-            #000 34%,
-            rgba(0, 0, 0, 0.55) 52%,
-            rgba(0, 0, 0, 0.18) 68%,
-            transparent 84%,
+            #000 0%,
+            #000 52%,
+            rgba(0, 0, 0, 0.82) 56%,
+            rgba(0, 0, 0, 0.22) 60%,
+            transparent 64%,
             transparent 100%
           );
           mask-image: linear-gradient(
             to bottom,
-            transparent 0%,
-            transparent 8%,
-            #000 18%,
-            #000 34%,
-            rgba(0, 0, 0, 0.55) 52%,
-            rgba(0, 0, 0, 0.18) 68%,
-            transparent 84%,
+            #000 0%,
+            #000 52%,
+            rgba(0, 0, 0, 0.82) 56%,
+            rgba(0, 0, 0, 0.22) 60%,
+            transparent 64%,
             transparent 100%
           );
+          -webkit-mask-size: 100% 200%;
+          mask-size: 100% 200%;
           -webkit-mask-repeat: no-repeat;
           mask-repeat: no-repeat;
-          transform: translateZ(0);
+          -webkit-mask-position: center 130%;
+          mask-position: center 130%;
+          -webkit-animation: gownWipeSoft ${WIPE_SECONDS}s linear forwards;
+          animation: gownWipeSoft ${WIPE_SECONDS}s linear forwards;
+          animation-fill-mode: forwards;
+          -webkit-animation-fill-mode: forwards;
+          will-change: -webkit-mask-position, mask-position;
         }
 
-        .gown-feather-blur {
-          position: absolute;
-          inset: 0;
-          filter: blur(22px);
-          transform: translateZ(0);
+        .gown-wipe-settled {
+          -webkit-mask-image: none;
+          mask-image: none;
         }
 
-        .gown-feather-shift {
-          position: absolute;
-          left: 6.897%;
-          width: 86.207%;
-          top: 72%;
-          height: 196.08%;
-          -webkit-animation: gownFeatherLock ${WIPE_SECONDS}s linear forwards;
-          animation: gownFeatherLock ${WIPE_SECONDS}s linear forwards;
+        @-webkit-keyframes gownWipeSoft {
+          0%, 17% { -webkit-mask-position: center 130%; mask-position: center 130%; }
+          87%, 100% { -webkit-mask-position: center -30%; mask-position: center -30%; }
         }
 
-        @-webkit-keyframes gownFeatherLock {
-          from { -webkit-transform: translate3d(0, 0, 0); transform: translate3d(0, 0, 0); }
-          to { -webkit-transform: translate3d(0, -142%, 0); transform: translate3d(0, -142%, 0); }
-        }
-
-        @keyframes gownFeatherLock {
-          from { transform: translate3d(0, 0, 0); }
-          to { transform: translate3d(0, -142%, 0); }
+        @keyframes gownWipeSoft {
+          0%, 17% { mask-position: center 130%; }
+          87%, 100% { mask-position: center -30%; }
         }
 
         .gown-edge {
@@ -845,43 +781,6 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
           to { transform: translate3d(0, 417.65%, 0); }
         }
 
-        .gown-haze {
-          position: absolute;
-          inset: 8% -4% 10%;
-          background: radial-gradient(ellipse at 50% 50%, rgba(255, 236, 196, 0.9), rgba(255, 210, 140, 0.42) 28%, rgba(255, 176, 90, 0.12) 58%, transparent 78%);
-        }
-
-        .gown-shimmer {
-          position: absolute;
-          inset: 22% 0 24%;
-          background: linear-gradient(
-            to bottom,
-            transparent 0%,
-            rgba(255, 236, 190, 0.22) 22%,
-            rgba(255, 252, 244, 0.92) 50%,
-            rgba(255, 214, 140, 0.24) 78%,
-            transparent 100%
-          );
-        }
-
-        .change-orb {
-          position: absolute;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(255, 252, 244, 0.96) 0%, rgba(255, 226, 170, 0.72) 22%, rgba(255, 186, 110, 0.28) 48%, transparent 72%);
-          -webkit-animation-name: changeOrb;
-          animation-name: changeOrb;
-          -webkit-animation-timing-function: ease-in-out;
-          animation-timing-function: ease-in-out;
-          -webkit-animation-iteration-count: infinite;
-          animation-iteration-count: infinite;
-          -webkit-animation-fill-mode: both;
-          animation-fill-mode: both;
-        }
-
-        .change-orb.gold {
-          background: radial-gradient(circle, rgba(255, 248, 224, 1) 0%, rgba(255, 204, 120, 0.78) 24%, rgba(226, 146, 64, 0.32) 50%, transparent 72%);
-        }
-
         .change-glitter {
           position: absolute;
           opacity: 0;
@@ -898,16 +797,6 @@ export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: 
         }
 
         .change-glitter.gold { color: #f6e3b0; }
-
-        @-webkit-keyframes changeOrb {
-          0%, 100% { opacity: 0.35; -webkit-transform: translate3d(0, 0, 0) scale(0.72); }
-          50% { opacity: 1; -webkit-transform: translate3d(0, 0, 0) scale(1.08); }
-        }
-
-        @keyframes changeOrb {
-          0%, 100% { opacity: 0.35; transform: translate3d(0, 0, 0) scale(0.72); }
-          50% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.08); }
-        }
 
         @-webkit-keyframes changeGlitter {
           0%, 100% { opacity: 0; -webkit-transform: translate3d(0, 0, 0) scale(0.3) rotate(0deg); }
