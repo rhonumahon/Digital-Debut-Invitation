@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useDebutProgram } from "../hooks/useDebutProgram";
 import {
@@ -11,6 +11,17 @@ import {
   saveTrack,
   saveVideo,
 } from "../program/audioDb";
+import {
+  fetchProgramMediaManifest,
+  isSiteMediaId,
+  manifestTracksAsLibrary,
+  manifestVideosAsLibrary,
+  mergeSiteCues,
+  siteTrackUrl,
+  siteVideoUrl,
+  type LibraryTrackRow,
+  type ProgramMediaManifest,
+} from "../program/bundledMedia";
 import { WELCOME_PROGRAM_TITLE } from "../program/defaultProgram";
 import { addBlankStep, loadProgramState, moveStep, moveStepTrackIds, removeStep } from "../program/programStore";
 import type { ProgramStep, ProgramTrack, ProgramVideo } from "../program/types";
@@ -39,8 +50,11 @@ const PROGRAM_DUCK_VOLUME = 0.28;
 
 export default function ProgramPage() {
   const { state, persist } = useDebutProgram();
-  const [tracks, setTracks] = useState<ProgramTrack[]>([]);
-  const [videos, setVideos] = useState<ProgramVideo[]>([]);
+  const [deviceTracks, setDeviceTracks] = useState<ProgramTrack[]>([]);
+  const [deviceVideos, setDeviceVideos] = useState<ProgramVideo[]>([]);
+  const [siteTracks, setSiteTracks] = useState<LibraryTrackRow[]>([]);
+  const [siteVideos, setSiteVideos] = useState<LibraryTrackRow[]>([]);
+  const manifestRef = useRef<ProgramMediaManifest>({ tracks: [], videos: [], stepTracks: {}, stepVideo: {} });
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeVideo, setActiveVideo] = useState<ActiveVideo | null>(null);
@@ -63,9 +77,51 @@ export default function ProgramPage() {
   hostDuckRef.current = hostDuck;
   const [musicPickId, setMusicPickId] = useState("");
 
+  const allTracks = useMemo(
+    () => [
+      ...siteTracks,
+      ...deviceTracks.map(
+        (track): LibraryTrackRow => ({
+          id: track.id,
+          fileName: track.fileName,
+          mimeType: track.mimeType,
+          createdAt: track.createdAt,
+          source: "device",
+        }),
+      ),
+    ],
+    [deviceTracks, siteTracks],
+  );
+
+  const allVideos = useMemo(
+    () => [
+      ...siteVideos,
+      ...deviceVideos.map(
+        (video): LibraryTrackRow => ({
+          id: video.id,
+          fileName: video.fileName,
+          mimeType: video.mimeType,
+          createdAt: video.createdAt,
+          source: "device",
+        }),
+      ),
+    ],
+    [deviceVideos, siteVideos],
+  );
+
+  const trackLabel = useCallback(
+    (trackId: string) => allTracks.find((track) => track.id === trackId)?.fileName ?? "Track",
+    [allTracks],
+  );
+
+  const videoLabel = useCallback(
+    (videoId: string) => allVideos.find((video) => video.id === videoId)?.fileName ?? "Video",
+    [allVideos],
+  );
+
   const refreshTracks = useCallback(async () => {
     try {
-      setTracks(await listTracks());
+      setDeviceTracks(await listTracks());
     } catch {
       setLoadError("Could not read saved MP3 library on this device.");
     }
@@ -73,7 +129,7 @@ export default function ProgramPage() {
 
   const refreshVideos = useCallback(async () => {
     try {
-      setVideos(await listVideos());
+      setDeviceVideos(await listVideos());
     } catch {
       setLoadError("Could not read saved videos on this device.");
     }
@@ -83,6 +139,19 @@ export default function ProgramPage() {
     void refreshTracks();
     void refreshVideos();
   }, [refreshTracks, refreshVideos]);
+
+  useEffect(() => {
+    void (async () => {
+      const manifest = await fetchProgramMediaManifest();
+      manifestRef.current = manifest;
+      setSiteTracks(manifestTracksAsLibrary(manifest));
+      setSiteVideos(manifestVideosAsLibrary(manifest));
+      const current = loadProgramState();
+      const merged = mergeSiteCues(current, manifest);
+      const changed = JSON.stringify(merged.steps) !== JSON.stringify(current.steps);
+      if (changed) persist(merged);
+    })();
+  }, [persist]);
 
   useEffect(() => {
     holdInvitationBackgroundAudio();
@@ -123,27 +192,32 @@ export default function ProgramPage() {
   const playTrackById = useCallback(
     async (trackId: string, segmentLabel: string) => {
       setLoadError("");
-      const blob = await getTrackBlob(trackId);
-      if (!blob) {
-        setLoadError("That MP3 is missing from this browser’s storage.");
-        playlistQueueRef.current = null;
-        return;
-      }
-      const track = tracks.find((item) => item.id === trackId);
-      revokeObjectUrl();
-      const url = URL.createObjectURL(blob);
-      objectUrlRef.current = url;
+      const siteUrl = siteTrackUrl(manifestRef.current, trackId);
       const audio = audioRef.current;
       if (!audio) return;
+
+      revokeObjectUrl();
+      let src = siteUrl;
+      if (!src) {
+        const blob = await getTrackBlob(trackId);
+        if (!blob) {
+          setLoadError("That MP3 is missing. Add it under public/assets/program/ or upload on this device.");
+          playlistQueueRef.current = null;
+          return;
+        }
+        src = URL.createObjectURL(blob);
+        objectUrlRef.current = src;
+      }
+
       audio.loop = repeatModeRef.current === "one";
       audio.volume = hostDuckRef.current ? PROGRAM_DUCK_VOLUME : PROGRAM_FULL_VOLUME;
-      audio.src = url;
+      audio.src = src;
       audio.load();
       await audio.play();
-      setNowPlaying({ trackId, label: segmentLabel, fileName: track?.fileName ?? "Track" });
+      setNowPlaying({ trackId, label: segmentLabel, fileName: trackLabel(trackId) });
       setIsPlaying(true);
     },
-    [revokeObjectUrl, tracks],
+    [revokeObjectUrl, trackLabel],
   );
 
   const playTrack = useCallback(
@@ -272,21 +346,26 @@ export default function ProgramPage() {
   const playVideo = useCallback(
     async (videoId: string, label: string) => {
       setLoadError("");
-      const blob = await getVideoBlob(videoId);
-      if (!blob) {
-        setLoadError("That video is missing from this browser’s storage.");
+      const siteUrl = siteVideoUrl(manifestRef.current, videoId);
+      revokeVideoObjectUrl();
+      if (siteUrl) {
+        setActiveVideo({ id: videoId, label, fileName: videoLabel(videoId), url: siteUrl });
         return;
       }
-      const item = videos.find((video) => video.id === videoId);
-      revokeVideoObjectUrl();
+      const blob = await getVideoBlob(videoId);
+      if (!blob) {
+        setLoadError("That video is missing. Add it under public/assets/program/ or upload on this device.");
+        return;
+      }
       const url = URL.createObjectURL(blob);
       videoObjectUrlRef.current = url;
-      setActiveVideo({ id: videoId, label, fileName: item?.fileName ?? "Video", url });
+      setActiveVideo({ id: videoId, label, fileName: videoLabel(videoId), url });
     },
-    [revokeVideoObjectUrl, videos],
+    [revokeVideoObjectUrl, videoLabel],
   );
 
   const onDeleteTrack = async (trackId: string) => {
+    if (isSiteMediaId(trackId)) return;
     if (!window.confirm("Remove this MP3 from the library? Steps using it will lose their assignment.")) return;
     await deleteTrack(trackId);
     persist({
@@ -304,6 +383,7 @@ export default function ProgramPage() {
   };
 
   const onDeleteVideo = async (videoId: string) => {
+    if (isSiteMediaId(videoId)) return;
     if (!window.confirm("Remove this video from the library? Segments using it will lose their assignment.")) return;
     await deleteVideo(videoId);
     persist({
@@ -361,7 +441,8 @@ export default function ProgramPage() {
         <p className="font-cinzel text-xs tracking-[0.2em] uppercase text-[#f09060]">Event desk</p>
         <h1 className="font-playfair text-3xl sm:text-4xl mt-2">Program & music</h1>
         <p className="font-garamond text-[#f0d2b0] mt-3 max-w-2xl leading-relaxed">
-          Run the night from the timeline. Notes appear as descriptions—use Add note to edit in a dialog.
+          Run the night from the timeline. Event MP3s/videos in <code className="text-[#f09060]/90">public/assets/program/</code> deploy
+          with the site (every browser). Uploads here stay on this device only.
         </p>
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)] lg:items-start">
@@ -430,7 +511,7 @@ export default function ProgramPage() {
                             <li key={trackId} className="flex items-center gap-1.5 min-w-0">
                               <span aria-hidden>♪</span>
                               <span className="truncate">
-                                {tracks.find((t) => t.id === trackId)?.fileName ?? `Track ${trackIndex + 1}`}
+                                {trackLabel(trackId)}
                               </span>
                             </li>
                           ))}
@@ -441,7 +522,7 @@ export default function ProgramPage() {
                         <p className="font-garamond text-xs text-[#f0d2b0]/90 mt-2 flex items-center gap-1.5">
                           <span aria-hidden>▶</span>
                           <span className="truncate">
-                            {videos.find((v) => v.id === step.videoId)?.fileName ?? "Video cue"}
+                            {videoLabel(step.videoId)}
                           </span>
                         </p>
                       )}
@@ -501,16 +582,21 @@ export default function ProgramPage() {
                 />
               </label>
             </div>
-            {tracks.length === 0 ? (
-              <p className="font-garamond text-sm text-[#f0d2b0] mt-4">Upload MP3s, then assign them from Music on each segment.</p>
+            {allTracks.length === 0 ? (
+              <p className="font-garamond text-sm text-[#f0d2b0] mt-4">
+                Add files to the repo under public/assets/program/ (see README.txt), or upload for this browser only.
+              </p>
             ) : (
               <ul className="mt-4 space-y-2 max-h-[min(60vh,28rem)] overflow-y-auto pr-1">
-                {tracks.map((track) => (
+                {allTracks.map((track) => (
                   <li
                     key={track.id}
                     className="flex items-center gap-2 rounded-lg border border-[#f09060]/20 bg-[#06101c]/50 px-2 py-2"
                   >
                     <span className="font-garamond text-xs text-[#f6f0e6] flex-1 min-w-0 truncate">{track.fileName}</span>
+                    {track.source === "site" && (
+                      <span className="font-cinzel text-[8px] uppercase text-[#f09060]/80 shrink-0">Site</span>
+                    )}
                     <button
                       type="button"
                       onClick={() => void playTrack(track.id, track.fileName)}
@@ -518,13 +604,15 @@ export default function ProgramPage() {
                     >
                       Play
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => void onDeleteTrack(track.id)}
-                      className="shrink-0 font-cinzel text-[9px] tracking-wider uppercase text-[#f0d2b0]/70"
-                    >
-                      Del
-                    </button>
+                    {track.source === "device" && (
+                      <button
+                        type="button"
+                        onClick={() => void onDeleteTrack(track.id)}
+                        className="shrink-0 font-cinzel text-[9px] tracking-wider uppercase text-[#f0d2b0]/70"
+                      >
+                        Del
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -545,17 +633,24 @@ export default function ProgramPage() {
                 />
               </label>
             </div>
-            <p className="font-garamond text-[11px] text-[#f0d2b0]/80 mt-2">MP4 or WebM · stored on this device only</p>
-            {videos.length === 0 ? (
-              <p className="font-garamond text-sm text-[#f0d2b0] mt-4">Upload clips, then assign them from Video on each segment.</p>
+            <p className="font-garamond text-[11px] text-[#f0d2b0]/80 mt-2">
+              Site clips from manifest · uploads stay on this device only
+            </p>
+            {allVideos.length === 0 ? (
+              <p className="font-garamond text-sm text-[#f0d2b0] mt-4">
+                Add MP4/WebM to public/assets/program/ (see README.txt), or upload for this browser only.
+              </p>
             ) : (
               <ul className="mt-4 space-y-2 max-h-[min(40vh,20rem)] overflow-y-auto pr-1">
-                {videos.map((video) => (
+                {allVideos.map((video) => (
                   <li
                     key={video.id}
                     className="flex items-center gap-2 rounded-lg border border-[#f09060]/20 bg-[#06101c]/50 px-2 py-2"
                   >
                     <span className="font-garamond text-xs text-[#f6f0e6] flex-1 min-w-0 truncate">{video.fileName}</span>
+                    {video.source === "site" && (
+                      <span className="font-cinzel text-[8px] uppercase text-[#f09060]/80 shrink-0">Site</span>
+                    )}
                     <button
                       type="button"
                       onClick={() => void playVideo(video.id, video.fileName)}
@@ -563,13 +658,15 @@ export default function ProgramPage() {
                     >
                       Play
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => void onDeleteVideo(video.id)}
-                      className="shrink-0 font-cinzel text-[9px] tracking-wider uppercase text-[#f0d2b0]/70"
-                    >
-                      Del
-                    </button>
+                    {video.source === "device" && (
+                      <button
+                        type="button"
+                        onClick={() => void onDeleteVideo(video.id)}
+                        className="shrink-0 font-cinzel text-[9px] tracking-wider uppercase text-[#f0d2b0]/70"
+                      >
+                        Del
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -647,7 +744,7 @@ export default function ProgramPage() {
             ) : (
               <ol className="space-y-2">
                 {musicStep.trackIds.map((trackId, index) => {
-                  const name = tracks.find((t) => t.id === trackId)?.fileName ?? "Missing track";
+                  const name = trackLabel(trackId);
                   return (
                     <li
                       key={trackId}
@@ -703,7 +800,7 @@ export default function ProgramPage() {
                   className="w-full rounded-md border border-[#f09060]/35 bg-[#06101c] px-3 py-2 font-garamond text-sm text-[#f6f0e6]"
                 >
                   <option value="">— Pick MP3 —</option>
-                  {tracks.map((track) => (
+                  {allTracks.map((track) => (
                     <option key={track.id} value={track.id} disabled={musicStep.trackIds.includes(track.id)}>
                       {track.fileName}
                     </option>
@@ -755,7 +852,7 @@ export default function ProgramPage() {
               className="w-full rounded-md border border-[#f09060]/35 bg-[#06101c] px-3 py-2 font-garamond text-sm text-[#f6f0e6]"
             >
               <option value="">— No video —</option>
-              {videos.map((video) => (
+              {allVideos.map((video) => (
                 <option key={video.id} value={video.id}>
                   {video.fileName}
                 </option>
