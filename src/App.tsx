@@ -29,6 +29,7 @@ import {
 import SectionFlourish from "./components/SectionFlourish";
 import Reveal, { RevealReadyProvider } from "./components/Reveal";
 import {
+  INVITATION_USER_ACTIVATED,
   InvitationAudioProvider,
   notifyInvitationUserActivation,
 } from "./contexts/InvitationAudioContext";
@@ -38,9 +39,9 @@ import {
   startInvitationMomentVideoPreload,
 } from "./utils/momentVideoRegistry";
 import { useFitNavRow } from "./hooks/useFitSingleLineText";
+import { isFinaleSrc, startFinaleInvitationAudio } from "./utils/finaleInvitationAudio";
 
 const INTRO_MUSIC = "/assets/intro.mp3";
-const FINALE_MUSIC = "/assets/last20sec.mp3";
 const FINALE_LEAD_MS = 20_000;
 
 const SYNC_BACKDROP_STRENGTH = 0.68;
@@ -127,30 +128,36 @@ export default function App() {
 
   useEffect(() => {
     if (finaleMusic) return;
-    let timer = 0;
-    const arm = () => {
-      const wait = grandEntryMs - FINALE_LEAD_MS - Date.now();
-      if (wait <= 0) {
+
+    const tick = () => {
+      if (Date.now() >= grandEntryMs - FINALE_LEAD_MS) {
         setFinaleMusic(true);
-        return;
       }
-      timer = window.setTimeout(arm, Math.min(wait, 2_147_483_647));
     };
-    arm();
-    return () => window.clearTimeout(timer);
+
+    tick();
+    const interval = window.setInterval(tick, 400);
+    const onVisible = () => tick();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
   }, [finaleMusic, grandEntryMs]);
 
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !finaleMusic) return;
-    const keepPlaying = !audio.paused || isPlaying;
-    audio.loop = false;
-    if (!audio.src.includes("last20sec.mp3")) audio.src = FINALE_MUSIC;
-    if (keepPlaying) {
-      audio.play().catch((err) => {
-        console.warn("Finale music could not start:", err);
-      });
+    if (!finaleMusic) return;
+    if (startFinaleInvitationAudio()) {
+      setIsPlaying(true);
     }
+    const retryAfterGesture = () => {
+      if (startFinaleInvitationAudio()) setIsPlaying(true);
+    };
+    window.addEventListener(INVITATION_USER_ACTIVATED, retryAfterGesture);
+    return () => window.removeEventListener(INVITATION_USER_ACTIVATED, retryAfterGesture);
   }, [finaleMusic]);
 
   useEffect(() => {
@@ -198,11 +205,21 @@ export default function App() {
 
   const startMusic = () => {
     notifyInvitationUserActivation();
+    if (Date.now() >= grandEntryMs - FINALE_LEAD_MS) {
+      setFinaleMusic(true);
+      return;
+    }
     const audio = audioRef.current;
     if (!audio || !audio.paused || suppressAutoplay.current) return;
     audio.muted = false;
     audio.volume = 0.35;
-    audio.play()
+    audio.loop = true;
+    if (isFinaleSrc(audio.src)) {
+      audio.src = INTRO_MUSIC;
+      audio.load();
+    }
+    audio
+      .play()
       .then(() => setIsPlaying(true))
       .catch((err) => {
         console.warn("Audio autoplay blocked by browser policy:", err);
@@ -859,13 +876,24 @@ export default function App() {
                   notifyInvitationUserActivation();
                   suppressAutoplay.current = false;
                   window.__invitationMusicHeld = false;
-                  audioRef.current.muted = false;
-                  audioRef.current.volume = 0.35;
-                  audioRef.current.play()
-                    .then(() => setIsPlaying(true))
-                    .catch((err) => {
-                      console.warn("Audio playback failed or was blocked by browser:", err);
-                    });
+                  if (finaleMusic) {
+                    startFinaleInvitationAudio();
+                    setIsPlaying(true);
+                  } else {
+                    audioRef.current.muted = false;
+                    audioRef.current.volume = 0.35;
+                    if (!isFinaleSrc(audioRef.current.src)) {
+                      audioRef.current.src = INTRO_MUSIC;
+                      audioRef.current.loop = true;
+                      audioRef.current.load();
+                    }
+                    audioRef.current
+                      .play()
+                      .then(() => setIsPlaying(true))
+                      .catch((err) => {
+                        console.warn("Audio playback failed or was blocked by browser:", err);
+                      });
+                  }
                 }
               }
             }}
