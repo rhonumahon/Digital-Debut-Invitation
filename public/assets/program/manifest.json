@@ -1,24 +1,26 @@
 {
   "tracks": [
     {
+      "id": "site:machine-audio-roses",
+      "fileName": "Machine audio (18 Roses)",
+      "path": "/assets/program/machine-audio-2026-10-10T16-39-20-676Z.mp3"
+    },
+    {
       "id": "site:whole-new-world-karaoke",
-      "fileName": "A Whole New World (Karaoke).mp3",
+      "fileName": "A Whole New World (Karaoke)",
       "path": "/assets/program/a-whole-new-world-karaoke.mp3"
     },
     {
-      "id": "site:machine-audio-2026-10-10",
-      "fileName": "Machine audio (Oct 10).mp3",
-      "path": "/assets/program/machine-audio-2026-10-10.mp3"
-    },
-    {
       "id": "site:taylor-swift-style",
-      "fileName": "Taylor Swift - Style.mp3",
+      "fileName": "Taylor Swift — Style",
       "path": "/assets/program/taylor-swift-style.mp3"
     }
   ],
   "videos": [],
   "stepTracks": {
-    "Jaylyn\u2019s Solo Song Number": ["site:whole-new-world-karaoke"]
+    "18 Roses": ["site:machine-audio-roses"],
+    "Daddy Jaypee and Jaylyn Dance": ["site:whole-new-world-karaoke"],
+    "18 Fashion Pieces": ["site:taylor-swift-style"]
   },
   "stepVideo": {}
 }

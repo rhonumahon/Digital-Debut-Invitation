@@ -1,7 +1,7 @@
 import { DEFAULT_PROGRAM_STEPS } from "./defaultProgram";
 import type { ProgramState, ProgramStep } from "./types";
 
-const STORAGE_KEY = "jaylyn-debut-program-v1";
+const STORAGE_KEY = "jaylyn-debut-program-v2";
 export const PROGRAM_UPDATED_EVENT = "jaylyn-program-updated";
 
 function normalizeTrackIds(step: {

@@ -1,30 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useDebutProgram } from "../hooks/useDebutProgram";
 import {
-  deleteTrack,
-  deleteVideo,
-  getTrackBlob,
-  getVideoBlob,
-  listTracks,
-  listVideos,
-  saveTrack,
-  saveVideo,
-} from "../program/audioDb";
-import {
   fetchProgramMediaManifest,
-  isSiteMediaId,
   manifestTracksAsLibrary,
   manifestVideosAsLibrary,
-  mergeSiteCues,
   siteTrackUrl,
   siteVideoUrl,
   type LibraryTrackRow,
   type ProgramMediaManifest,
 } from "../program/bundledMedia";
+import { ADMIN_PIN_KEY } from "../attendance/session";
 import { WELCOME_PROGRAM_TITLE } from "../program/defaultProgram";
-import { addBlankStep, loadProgramState, moveStep, moveStepTrackIds, removeStep } from "../program/programStore";
-import type { ProgramStep, ProgramTrack, ProgramVideo } from "../program/types";
+import { addBlankStep, moveStep, moveStepTrackIds, removeStep } from "../program/programStore";
+import type { ProgramStep } from "../program/types";
 import {
   getInvitationBackgroundAudio,
   holdInvitationBackgroundAudio,
@@ -50,8 +39,6 @@ const PROGRAM_DUCK_VOLUME = 0.28;
 
 export default function ProgramPage() {
   const { state, persist } = useDebutProgram();
-  const [deviceTracks, setDeviceTracks] = useState<ProgramTrack[]>([]);
-  const [deviceVideos, setDeviceVideos] = useState<ProgramVideo[]>([]);
   const [siteTracks, setSiteTracks] = useState<LibraryTrackRow[]>([]);
   const [siteVideos, setSiteVideos] = useState<LibraryTrackRow[]>([]);
   const manifestRef = useRef<ProgramMediaManifest>({ tracks: [], videos: [], stepTracks: {}, stepVideo: {} });
@@ -77,37 +64,8 @@ export default function ProgramPage() {
   hostDuckRef.current = hostDuck;
   const [musicPickId, setMusicPickId] = useState("");
 
-  const allTracks = useMemo(
-    () => [
-      ...siteTracks,
-      ...deviceTracks.map(
-        (track): LibraryTrackRow => ({
-          id: track.id,
-          fileName: track.fileName,
-          mimeType: track.mimeType,
-          createdAt: track.createdAt,
-          source: "device",
-        }),
-      ),
-    ],
-    [deviceTracks, siteTracks],
-  );
-
-  const allVideos = useMemo(
-    () => [
-      ...siteVideos,
-      ...deviceVideos.map(
-        (video): LibraryTrackRow => ({
-          id: video.id,
-          fileName: video.fileName,
-          mimeType: video.mimeType,
-          createdAt: video.createdAt,
-          source: "device",
-        }),
-      ),
-    ],
-    [deviceVideos, siteVideos],
-  );
+  const allTracks = siteTracks;
+  const allVideos = siteVideos;
 
   const trackLabel = useCallback(
     (trackId: string) => allTracks.find((track) => track.id === trackId)?.fileName ?? "Track",
@@ -119,39 +77,13 @@ export default function ProgramPage() {
     [allVideos],
   );
 
-  const refreshTracks = useCallback(async () => {
-    try {
-      setDeviceTracks(await listTracks());
-    } catch {
-      setLoadError("Could not read saved MP3 library on this device.");
-    }
-  }, []);
-
-  const refreshVideos = useCallback(async () => {
-    try {
-      setDeviceVideos(await listVideos());
-    } catch {
-      setLoadError("Could not read saved videos on this device.");
-    }
-  }, []);
-
   useEffect(() => {
-    void refreshTracks();
-    void refreshVideos();
-  }, [refreshTracks, refreshVideos]);
-
-  useEffect(() => {
-    void (async () => {
-      const manifest = await fetchProgramMediaManifest();
+    void fetchProgramMediaManifest().then((manifest) => {
       manifestRef.current = manifest;
       setSiteTracks(manifestTracksAsLibrary(manifest));
       setSiteVideos(manifestVideosAsLibrary(manifest));
-      const current = loadProgramState();
-      const merged = mergeSiteCues(current, manifest);
-      const changed = JSON.stringify(merged.steps) !== JSON.stringify(current.steps);
-      if (changed) persist(merged);
-    })();
-  }, [persist]);
+    });
+  }, []);
 
   useEffect(() => {
     holdInvitationBackgroundAudio();
@@ -197,16 +129,11 @@ export default function ProgramPage() {
       if (!audio) return;
 
       revokeObjectUrl();
-      let src = siteUrl;
+      const src = siteUrl;
       if (!src) {
-        const blob = await getTrackBlob(trackId);
-        if (!blob) {
-          setLoadError("That MP3 is missing. Add it under public/assets/program/ or upload on this device.");
-          playlistQueueRef.current = null;
-          return;
-        }
-        src = URL.createObjectURL(blob);
-        objectUrlRef.current = src;
+        setLoadError("That MP3 is not in the site library (public/assets/program/manifest.json).");
+        playlistQueueRef.current = null;
+        return;
       }
 
       audio.loop = repeatModeRef.current === "one";
@@ -306,94 +233,19 @@ export default function ProgramPage() {
     else audio.pause();
   };
 
-  const uploadFiles = async (files: FileList | null, assignStepId?: string) => {
-    if (!files?.length) return;
-    for (const file of Array.from(files)) {
-      if (!file.type.startsWith("audio/") && !file.name.toLowerCase().endsWith(".mp3")) continue;
-      const saved = await saveTrack(file);
-      if (assignStepId) {
-        const current = loadProgramState();
-        persist({
-          steps: current.steps.map((step) => {
-            if (step.id !== assignStepId) return step;
-            if (step.trackIds.includes(saved.id)) return step;
-            return { ...step, trackIds: [...step.trackIds, saved.id] };
-          }),
-        });
-      }
-    }
-    await refreshTracks();
-  };
-
-  const uploadVideos = async (files: FileList | null, assignStepId?: string) => {
-    if (!files?.length) return;
-    for (const file of Array.from(files)) {
-      const isVideo =
-        file.type.startsWith("video/") || /\.(mp4|webm|mov|m4v)$/i.test(file.name);
-      if (!isVideo) continue;
-      const saved = await saveVideo(file);
-      if (assignStepId) {
-        persist({
-          steps: state.steps.map((step) =>
-            step.id === assignStepId ? { ...step, videoId: saved.id } : step,
-          ),
-        });
-      }
-    }
-    await refreshVideos();
-  };
-
   const playVideo = useCallback(
     async (videoId: string, label: string) => {
       setLoadError("");
       const siteUrl = siteVideoUrl(manifestRef.current, videoId);
       revokeVideoObjectUrl();
-      if (siteUrl) {
-        setActiveVideo({ id: videoId, label, fileName: videoLabel(videoId), url: siteUrl });
+      if (!siteUrl) {
+        setLoadError("That video is not in the site library (public/assets/program/manifest.json).");
         return;
       }
-      const blob = await getVideoBlob(videoId);
-      if (!blob) {
-        setLoadError("That video is missing. Add it under public/assets/program/ or upload on this device.");
-        return;
-      }
-      const url = URL.createObjectURL(blob);
-      videoObjectUrlRef.current = url;
-      setActiveVideo({ id: videoId, label, fileName: videoLabel(videoId), url });
+      setActiveVideo({ id: videoId, label, fileName: videoLabel(videoId), url: siteUrl });
     },
     [revokeVideoObjectUrl, videoLabel],
   );
-
-  const onDeleteTrack = async (trackId: string) => {
-    if (isSiteMediaId(trackId)) return;
-    if (!window.confirm("Remove this MP3 from the library? Steps using it will lose their assignment.")) return;
-    await deleteTrack(trackId);
-    persist({
-      steps: state.steps.map((step) => ({
-        ...step,
-        trackIds: step.trackIds.filter((id) => id !== trackId),
-      })),
-    });
-    if (nowPlaying?.trackId === trackId) {
-      audioRef.current?.pause();
-      setNowPlaying(null);
-      revokeObjectUrl();
-    }
-    await refreshTracks();
-  };
-
-  const onDeleteVideo = async (videoId: string) => {
-    if (isSiteMediaId(videoId)) return;
-    if (!window.confirm("Remove this video from the library? Segments using it will lose their assignment.")) return;
-    await deleteVideo(videoId);
-    persist({
-      steps: state.steps.map((step) => (step.videoId === videoId ? { ...step, videoId: null } : step)),
-    });
-    if (activeVideo?.id === videoId) {
-      closeVideoPlayer();
-    }
-    await refreshVideos();
-  };
 
   const updateStep = (id: string, patch: Partial<ProgramStep>) => {
     persist({
@@ -441,9 +293,15 @@ export default function ProgramPage() {
         <p className="font-cinzel text-xs tracking-[0.2em] uppercase text-[#f09060]">Event desk</p>
         <h1 className="font-playfair text-3xl sm:text-4xl mt-2">Program & music</h1>
         <p className="font-garamond text-[#f0d2b0] mt-3 max-w-2xl leading-relaxed">
-          Run the night from the timeline. Event MP3s/videos in <code className="text-[#f09060]/90">public/assets/program/</code> deploy
-          with the site (every browser). Uploads here stay on this device only.
+          Edit titles, notes, and segments here—they sync to the live invitation for all guests when you’ve entered the
+          admin PIN on <Link to="/admin" className="text-[#f09060] underline underline-offset-2">/admin</Link> in this
+          browser. Music comes from static files in <code className="text-[#f09060]/90">public/assets/program/</code>.
         </p>
+        {typeof sessionStorage !== "undefined" && !sessionStorage.getItem(ADMIN_PIN_KEY) && (
+          <p className="font-garamond text-sm text-[#f09060]/90 mt-2">
+            Sign in with your admin PIN on /admin once so timeline edits publish to production.
+          </p>
+        )}
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)] lg:items-start">
           {/* Left: vertical timeline */}
@@ -569,23 +427,10 @@ export default function ProgramPage() {
             <DjSoundPad />
 
           <div className="rounded-xl border border-[#f09060]/25 bg-[#0e2744]/70 p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-cinzel text-xs tracking-wider uppercase text-[#f09060]">MP3 library</h2>
-              <label className="font-cinzel text-[10px] tracking-wider uppercase cursor-pointer px-3 py-1.5 rounded-full bg-[#f09060] text-[#06101c] hover:brightness-110">
-                Upload
-                <input
-                  type="file"
-                  accept="audio/mpeg,audio/mp3,audio/*,.mp3"
-                  multiple
-                  className="sr-only"
-                  onChange={(event) => void uploadFiles(event.target.files)}
-                />
-              </label>
-            </div>
+            <h2 className="font-cinzel text-xs tracking-wider uppercase text-[#f09060]">MP3 library</h2>
+            <p className="font-garamond text-[11px] text-[#f0d2b0]/80 mt-2">Bundled with the site · assign from Music on each segment</p>
             {allTracks.length === 0 ? (
-              <p className="font-garamond text-sm text-[#f0d2b0] mt-4">
-                Add files to the repo under public/assets/program/ (see README.txt), or upload for this browser only.
-              </p>
+              <p className="font-garamond text-sm text-[#f0d2b0] mt-4">No tracks in manifest.json yet.</p>
             ) : (
               <ul className="mt-4 space-y-2 max-h-[min(60vh,28rem)] overflow-y-auto pr-1">
                 {allTracks.map((track) => (
@@ -594,9 +439,6 @@ export default function ProgramPage() {
                     className="flex items-center gap-2 rounded-lg border border-[#f09060]/20 bg-[#06101c]/50 px-2 py-2"
                   >
                     <span className="font-garamond text-xs text-[#f6f0e6] flex-1 min-w-0 truncate">{track.fileName}</span>
-                    {track.source === "site" && (
-                      <span className="font-cinzel text-[8px] uppercase text-[#f09060]/80 shrink-0">Site</span>
-                    )}
                     <button
                       type="button"
                       onClick={() => void playTrack(track.id, track.fileName)}
@@ -604,43 +446,15 @@ export default function ProgramPage() {
                     >
                       Play
                     </button>
-                    {track.source === "device" && (
-                      <button
-                        type="button"
-                        onClick={() => void onDeleteTrack(track.id)}
-                        className="shrink-0 font-cinzel text-[9px] tracking-wider uppercase text-[#f0d2b0]/70"
-                      >
-                        Del
-                      </button>
-                    )}
                   </li>
                 ))}
               </ul>
             )}
           </div>
 
+          {allVideos.length > 0 && (
           <div className="rounded-xl border border-[#f09060]/25 bg-[#0e2744]/70 p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-cinzel text-xs tracking-wider uppercase text-[#f09060]">Video library</h2>
-              <label className="font-cinzel text-[10px] tracking-wider uppercase cursor-pointer px-3 py-1.5 rounded-full bg-[#f09060] text-[#06101c] hover:brightness-110">
-                Upload
-                <input
-                  type="file"
-                  accept="video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm,.m4v"
-                  multiple
-                  className="sr-only"
-                  onChange={(event) => void uploadVideos(event.target.files)}
-                />
-              </label>
-            </div>
-            <p className="font-garamond text-[11px] text-[#f0d2b0]/80 mt-2">
-              Site clips from manifest · uploads stay on this device only
-            </p>
-            {allVideos.length === 0 ? (
-              <p className="font-garamond text-sm text-[#f0d2b0] mt-4">
-                Add MP4/WebM to public/assets/program/ (see README.txt), or upload for this browser only.
-              </p>
-            ) : (
+            <h2 className="font-cinzel text-xs tracking-wider uppercase text-[#f09060]">Video library</h2>
               <ul className="mt-4 space-y-2 max-h-[min(40vh,20rem)] overflow-y-auto pr-1">
                 {allVideos.map((video) => (
                   <li
@@ -648,9 +462,6 @@ export default function ProgramPage() {
                     className="flex items-center gap-2 rounded-lg border border-[#f09060]/20 bg-[#06101c]/50 px-2 py-2"
                   >
                     <span className="font-garamond text-xs text-[#f6f0e6] flex-1 min-w-0 truncate">{video.fileName}</span>
-                    {video.source === "site" && (
-                      <span className="font-cinzel text-[8px] uppercase text-[#f09060]/80 shrink-0">Site</span>
-                    )}
                     <button
                       type="button"
                       onClick={() => void playVideo(video.id, video.fileName)}
@@ -658,20 +469,11 @@ export default function ProgramPage() {
                     >
                       Play
                     </button>
-                    {video.source === "device" && (
-                      <button
-                        type="button"
-                        onClick={() => void onDeleteVideo(video.id)}
-                        className="shrink-0 font-cinzel text-[9px] tracking-wider uppercase text-[#f0d2b0]/70"
-                      >
-                        Del
-                      </button>
-                    )}
                   </li>
                 ))}
               </ul>
-            )}
           </div>
+          )}
           </aside>
         </div>
 
@@ -740,7 +542,7 @@ export default function ProgramPage() {
         >
           <div className="space-y-4">
             {musicStep.trackIds.length === 0 ? (
-              <p className="font-garamond text-sm text-[#f0d2b0]">No tracks yet. Add MP3s below—for Dinner you can stack several songs.</p>
+              <p className="font-garamond text-sm text-[#f0d2b0]">No tracks yet. Pick from the site library—for Dinner you can stack several songs.</p>
             ) : (
               <ol className="space-y-2">
                 {musicStep.trackIds.map((trackId, index) => {
@@ -810,20 +612,6 @@ export default function ProgramPage() {
               <ModalButton onClick={() => addTrackToStep(musicStep.id, musicPickId)}>Add</ModalButton>
             </div>
 
-            <label className="font-cinzel text-[10px] tracking-wider uppercase cursor-pointer inline-block px-3 py-2 rounded-full border border-[#f09060]/45 text-[#f09060]">
-              Upload MP3 (adds to playlist)
-              <input
-                type="file"
-                accept="audio/mpeg,audio/mp3,audio/*,.mp3"
-                multiple
-                className="sr-only"
-                onChange={(event) => {
-                  void uploadFiles(event.target.files, musicStep.id);
-                  event.target.value = "";
-                }}
-              />
-            </label>
-
             {musicStep.trackIds.length > 0 && (
               <button
                 type="button"
@@ -858,18 +646,6 @@ export default function ProgramPage() {
                 </option>
               ))}
             </select>
-            <label className="font-cinzel text-[10px] tracking-wider uppercase cursor-pointer inline-block px-3 py-2 rounded-full border border-[#f09060]/45 text-[#f09060]">
-              Upload video for this segment
-              <input
-                type="file"
-                accept="video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm,.m4v"
-                className="sr-only"
-                onChange={(event) => {
-                  void uploadVideos(event.target.files, videoStep.id);
-                  event.target.value = "";
-                }}
-              />
-            </label>
             {videoStep.videoId && (
               <button
                 type="button"

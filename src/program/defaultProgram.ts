@@ -12,6 +12,7 @@ export const DEFAULT_PROGRAM_STEPS: Omit<ProgramStep, "id" | "trackIds">[] = [
   { title: "18 Glam", note: "" },
   { title: "18 Treasures", note: "" },
   { title: "Game 2", note: "Jaylyn changes from her ball gown into her dance outfit" },
+  { title: "Daddy Jaypee and Jaylyn Dance", note: "" },
   { title: "Jaylyn’s Production Number", note: "First performance" },
   { title: "18 Bills", note: "A short pause after the performance" },
   { title: "Game 3", note: "Costume change for the kata" },
