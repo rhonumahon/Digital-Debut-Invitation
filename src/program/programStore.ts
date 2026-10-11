@@ -26,11 +26,12 @@ export function moveStepTrackIds(step: ProgramStep, trackIndex: number, directio
   return { ...step, trackIds };
 }
 
-function newStep(partial: { title: string; note: string }): ProgramStep {
+function newStep(partial: { title: string; note?: string; internalNote?: string }): ProgramStep {
   return {
     id: crypto.randomUUID(),
     title: partial.title,
-    note: partial.note,
+    note: partial.note ?? "",
+    internalNote: partial.internalNote ?? "",
     trackIds: [],
     videoId: null,
   };
@@ -53,6 +54,7 @@ function parseStored(raw: string | null): ProgramState | null {
         id: typeof step.id === "string" ? step.id : crypto.randomUUID(),
         title: step.title,
         note: typeof step.note === "string" ? step.note : "",
+        internalNote: typeof step.internalNote === "string" ? step.internalNote : "",
         trackIds: normalizeTrackIds(step),
         videoId: typeof step.videoId === "string" ? step.videoId : null,
       }));

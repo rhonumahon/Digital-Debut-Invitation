@@ -1,7 +1,10 @@
 export interface ProgramStep {
   id: string;
   title: string;
+  /** Shown on the guest invitation timeline. */
   note: string;
+  /** Event desk only — not shown on the public invitation. */
+  internalNote: string;
   trackIds: string[];
   videoId: string | null;
 }

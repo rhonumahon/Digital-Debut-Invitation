@@ -27,7 +27,12 @@ type NowPlaying = {
   fileName: string;
 };
 
-type NoteModalState = { stepId: string; title: string; draft: string } | null;
+type NoteModalState = {
+  stepId: string;
+  title: string;
+  draft: string;
+  kind: "guest" | "internal";
+} | null;
 type MusicModalState = { stepId: string; title: string } | null;
 type VideoModalState = { stepId: string; title: string } | null;
 type TitleModalState = { stepId: string; draft: string } | null;
@@ -257,7 +262,12 @@ export default function ProgramPage() {
 
   const saveNote = () => {
     if (!noteModal) return;
-    updateStep(noteModal.stepId, { note: noteModal.draft.trim() });
+    const text = noteModal.draft.trim();
+    if (noteModal.kind === "internal") {
+      updateStep(noteModal.stepId, { internalNote: text });
+    } else {
+      updateStep(noteModal.stepId, { note: text });
+    }
     setNoteModal(null);
   };
 
@@ -293,9 +303,9 @@ export default function ProgramPage() {
         <p className="font-cinzel text-xs tracking-[0.2em] uppercase text-[#f09060]">Event desk</p>
         <h1 className="font-playfair text-3xl sm:text-4xl mt-2">Program & music</h1>
         <p className="font-garamond text-[#f0d2b0] mt-3 max-w-2xl leading-relaxed">
-          Edit titles, notes, and segments here—they sync to the live invitation for all guests when you’ve entered the
-          admin PIN on <Link to="/admin" className="text-[#f09060] underline underline-offset-2">/admin</Link> in this
-          browser. Music comes from static files in <code className="text-[#f09060]/90">public/assets/program/</code>.
+          Edit titles and segments here. <strong className="font-normal text-[#f6f0e6]">Guest notes</strong> sync to the
+          invitation; <strong className="font-normal text-[#f6f0e6]">internal notes</strong> stay on the event desk only
+          (admin PIN on <Link to="/admin" className="text-[#f09060] underline underline-offset-2">/admin</Link>).
         </p>
         {typeof sessionStorage !== "undefined" && !sessionStorage.getItem(ADMIN_PIN_KEY) && (
           <p className="font-garamond text-sm text-[#f09060]/90 mt-2">
@@ -358,9 +368,21 @@ export default function ProgramPage() {
                       )}
 
                       {step.note.trim() ? (
-                        <p className="font-garamond text-sm sm:text-base text-[#f0d2b0] leading-relaxed mt-2 whitespace-pre-wrap">
-                          {step.note}
-                        </p>
+                        <div className="mt-2">
+                          <p className="font-cinzel text-[8px] tracking-wider uppercase text-[#f09060]/75">Guest note</p>
+                          <p className="font-garamond text-sm sm:text-base text-[#f0d2b0] leading-relaxed whitespace-pre-wrap">
+                            {step.note}
+                          </p>
+                        </div>
+                      ) : null}
+
+                      {step.internalNote.trim() ? (
+                        <div className="mt-2 pl-3 border-l-2 border-[#f09060]/45">
+                          <p className="font-cinzel text-[8px] tracking-wider uppercase text-[#f09060]">Internal</p>
+                          <p className="font-garamond text-sm text-[#f6f0e6]/90 leading-relaxed whitespace-pre-wrap">
+                            {step.internalNote}
+                          </p>
+                        </div>
                       ) : null}
 
                       {step.trackIds.length > 0 && (
@@ -386,8 +408,29 @@ export default function ProgramPage() {
                       )}
 
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <GhostButton onClick={() => setNoteModal({ stepId: step.id, title: step.title, draft: step.note })}>
-                          {step.note.trim() ? "Edit note" : "Add note"}
+                        <GhostButton
+                          onClick={() =>
+                            setNoteModal({
+                              stepId: step.id,
+                              title: step.title,
+                              draft: step.note,
+                              kind: "guest",
+                            })
+                          }
+                        >
+                          {step.note.trim() ? "Edit guest note" : "Guest note"}
+                        </GhostButton>
+                        <GhostButton
+                          onClick={() =>
+                            setNoteModal({
+                              stepId: step.id,
+                              title: step.title,
+                              draft: step.internalNote,
+                              kind: "internal",
+                            })
+                          }
+                        >
+                          {step.internalNote.trim() ? "Edit internal" : "Internal note"}
                         </GhostButton>
                         <GhostButton onClick={() => setMusicModal({ stepId: step.id, title: step.title })}>
                           Music
@@ -489,12 +532,20 @@ export default function ProgramPage() {
       {noteModal && (
         <Modal
           title={noteModal.title}
-          subtitle={noteModal.draft.trim() ? "Edit note" : "Add note"}
+          subtitle={
+            noteModal.kind === "internal"
+              ? noteModal.draft.trim()
+                ? "Edit internal note (desk only)"
+                : "Add internal note (desk only)"
+              : noteModal.draft.trim()
+                ? "Edit guest note (invitation)"
+                : "Add guest note (invitation)"
+          }
           onClose={() => setNoteModal(null)}
           footer={
             <>
               <ModalButton variant="ghost" onClick={() => setNoteModal(null)}>Cancel</ModalButton>
-              <ModalButton onClick={saveNote}>Save note</ModalButton>
+              <ModalButton onClick={saveNote}>Save</ModalButton>
             </>
           }
         >
@@ -502,7 +553,11 @@ export default function ProgramPage() {
             autoFocus
             value={noteModal.draft}
             rows={5}
-            placeholder="Cues, speakers, costume changes…"
+            placeholder={
+              noteModal.kind === "internal"
+                ? "Run sheet cues, AV, who’s on deck…"
+                : "What guests see under this segment…"
+            }
             onChange={(event) => setNoteModal({ ...noteModal, draft: event.target.value })}
             className="w-full rounded-md border border-[#f09060]/35 bg-[#06101c] px-3 py-2 font-garamond text-sm text-[#f0d2b0] resize-y min-h-[7rem] focus:outline-none focus:border-[#f09060]/70"
           />

@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ADMIN_PIN_KEY } from "../attendance/session";
 import { fetchProgramMediaManifest, mergeSiteCues } from "../program/bundledMedia";
-import { fetchRemoteProgram, saveRemoteProgram } from "../program/programRemote";
+import { fetchRemoteProgram, fetchRemoteProgramForDesk, saveRemoteProgram } from "../program/programRemote";
 import { loadProgramState, PROGRAM_UPDATED_EVENT, saveProgramState } from "../program/programStore";
 import type { ProgramState } from "../program/types";
 
 const POLL_MS = 20_000;
+
+function mergePreservedInternalNotes(local: ProgramState, remote: ProgramState): ProgramState {
+  const internalById = new Map(local.steps.map((step) => [step.id, step.internalNote]));
+  return {
+    steps: remote.steps.map((step) => ({
+      ...step,
+      internalNote: internalById.get(step.id) ?? step.internalNote ?? "",
+    })),
+  };
+}
 
 export function useDebutProgram() {
   const [state, setState] = useState<ProgramState>(() => loadProgramState());
@@ -41,8 +51,13 @@ export function useDebutProgram() {
 
     const pull = async () => {
       const manifest = await fetchProgramMediaManifest();
-      const remote = await fetchRemoteProgram();
-      let next = remote ?? loadProgramState();
+      const pin = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(ADMIN_PIN_KEY) : null;
+      const remote = pin ? await fetchRemoteProgramForDesk(pin) : await fetchRemoteProgram();
+      const local = loadProgramState();
+      let next = remote ?? local;
+      if (remote && !pin) {
+        next = mergePreservedInternalNotes(local, next);
+      }
       next = mergeSiteCues(next, manifest);
       if (cancelled) return;
       const serialized = JSON.stringify(stateRef.current.steps);

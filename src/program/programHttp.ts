@@ -22,12 +22,27 @@ function parseProgramState(raw: unknown): ProgramState | null {
       id: typeof step.id === "string" ? step.id : crypto.randomUUID(),
       title: step.title,
       note: typeof step.note === "string" ? step.note : "",
+      internalNote: typeof step.internalNote === "string" ? step.internalNote : "",
       trackIds: Array.isArray(step.trackIds)
         ? step.trackIds.filter((id): id is string => typeof id === "string" && id.length > 0)
         : [],
       videoId: typeof step.videoId === "string" ? step.videoId : null,
     }));
   return steps.length ? { steps } : null;
+}
+
+/** Guest invitation timeline — omit desk-only fields. */
+export function publicProgramState(state: ProgramState): ProgramState {
+  return {
+    steps: state.steps.map((step) => ({
+      id: step.id,
+      title: step.title,
+      note: step.note,
+      internalNote: "",
+      trackIds: step.trackIds,
+      videoId: step.videoId,
+    })),
+  };
 }
 
 export async function handleProgram(
@@ -42,7 +57,9 @@ export async function handleProgram(
     try {
       const data = await store.read();
       if (!data) return json({ steps: [] });
-      return json(data);
+      const parsed = parseProgramState(data);
+      if (!parsed) return json({ steps: [] });
+      return json(publicProgramState(parsed));
     } catch {
       return json({ error: "Could not load the program." }, 500);
     }
@@ -54,6 +71,17 @@ export async function handleProgram(
         { error: adminPin ? "That PIN is not correct." : "The admin PIN is not configured." },
         adminPin ? 401 : 503,
       );
+    }
+    if (request.method === "GET") {
+      try {
+        const data = await store.read();
+        if (!data) return json({ steps: [] });
+        const parsed = parseProgramState(data);
+        if (!parsed) return json({ steps: [] });
+        return json(parsed);
+      } catch {
+        return json({ error: "Could not load the program." }, 500);
+      }
     }
     if (request.method === "PUT") {
       try {
