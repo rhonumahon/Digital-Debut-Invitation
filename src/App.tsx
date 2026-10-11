@@ -33,13 +33,19 @@ import {
   InvitationAudioProvider,
   notifyInvitationUserActivation,
 } from "./contexts/InvitationAudioContext";
+import { getFinaleInvitationAudio } from "./utils/invitationBackgroundAudio";
 import {
   clearInvitationMediaActivation,
   notifyInvitationCelebrationVisible,
   startInvitationMomentVideoPreload,
 } from "./utils/momentVideoRegistry";
 import { useFitNavRow } from "./hooks/useFitSingleLineText";
-import { isFinaleSrc, startFinaleInvitationAudio } from "./utils/finaleInvitationAudio";
+import {
+  isFinaleAudioPlaying,
+  isFinaleSrc,
+  primeFinaleInvitationAudio,
+  startFinaleInvitationAudio,
+} from "./utils/finaleInvitationAudio";
 
 const INTRO_MUSIC = "/assets/intro.mp3";
 const FINALE_LEAD_MS = 20_000;
@@ -150,15 +156,34 @@ export default function App() {
 
   useEffect(() => {
     if (!finaleMusic) return;
-    if (startFinaleInvitationAudio()) {
-      setIsPlaying(true);
-    }
+    let cancelled = false;
+
+    const attempt = async () => {
+      if (cancelled || isFinaleAudioPlaying()) return;
+      const started = await startFinaleInvitationAudio();
+      if (!cancelled && started) setIsPlaying(true);
+    };
+
+    void attempt();
+    const interval = window.setInterval(() => void attempt(), 750);
     const retryAfterGesture = () => {
-      if (startFinaleInvitationAudio()) setIsPlaying(true);
+      primeFinaleInvitationAudio();
+      void attempt();
     };
     window.addEventListener(INVITATION_USER_ACTIVATED, retryAfterGesture);
-    return () => window.removeEventListener(INVITATION_USER_ACTIVATED, retryAfterGesture);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener(INVITATION_USER_ACTIVATED, retryAfterGesture);
+    };
   }, [finaleMusic]);
+
+  useEffect(() => {
+    const prime = () => primeFinaleInvitationAudio();
+    window.addEventListener(INVITATION_USER_ACTIVATED, prime);
+    return () => window.removeEventListener(INVITATION_USER_ACTIVATED, prime);
+  }, []);
 
   useEffect(() => {
     const toTop = () => window.scrollTo(0, 0);
@@ -214,10 +239,6 @@ export default function App() {
     audio.muted = false;
     audio.volume = 0.35;
     audio.loop = true;
-    if (isFinaleSrc(audio.src)) {
-      audio.src = INTRO_MUSIC;
-      audio.load();
-    }
     audio
       .play()
       .then(() => setIsPlaying(true))
@@ -871,14 +892,16 @@ export default function App() {
                   suppressAutoplay.current = true;
                   window.__invitationMusicHeld = true;
                   audioRef.current.pause();
+                  getFinaleInvitationAudio()?.pause();
                   setIsPlaying(false);
                 } else {
                   notifyInvitationUserActivation();
                   suppressAutoplay.current = false;
                   window.__invitationMusicHeld = false;
                   if (finaleMusic) {
-                    startFinaleInvitationAudio();
-                    setIsPlaying(true);
+                    void startFinaleInvitationAudio().then((started) => {
+                      if (started) setIsPlaying(true);
+                    });
                   } else {
                     audioRef.current.muted = false;
                     audioRef.current.volume = 0.35;

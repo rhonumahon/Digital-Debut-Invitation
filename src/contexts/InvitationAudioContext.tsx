@@ -32,6 +32,25 @@ function getInvitationAudio() {
   return document.getElementById("invitation-audio") as HTMLAudioElement | null;
 }
 
+function getFinaleAudio() {
+  if (typeof document === "undefined") return null;
+  return document.getElementById("finale-audio") as HTMLAudioElement | null;
+}
+
+function pauseInvitationMusic() {
+  getInvitationAudio()?.pause();
+  getFinaleAudio()?.pause();
+}
+
+function resumeInvitationMusic() {
+  const finale = getFinaleAudio();
+  if (finale && !finale.ended && finale.src.includes("last20sec")) {
+    void finale.play().catch(() => {});
+    return;
+  }
+  getInvitationAudio()?.play().catch(() => {});
+}
+
 export function InvitationAudioProvider({ children }: { children: ReactNode }) {
   const visibleMomentsRef = useRef(0);
   const petalsSuppressionRef = useRef(0);
@@ -51,10 +70,13 @@ export function InvitationAudioProvider({ children }: { children: ReactNode }) {
     if (visible) {
       visibleMomentsRef.current += 1;
       if (visibleMomentsRef.current !== 1) return;
-      const audio = getInvitationAudio();
-      if (audio && !audio.paused) {
+      const intro = getInvitationAudio();
+      const finale = getFinaleAudio();
+      const wasPlaying =
+        (intro && !intro.paused) || (finale && !finale.paused && !finale.ended);
+      if (wasPlaying) {
         pausedForVideoRef.current = true;
-        audio.pause();
+        pauseInvitationMusic();
       } else {
         pausedForVideoRef.current = false;
       }
@@ -64,9 +86,7 @@ export function InvitationAudioProvider({ children }: { children: ReactNode }) {
     visibleMomentsRef.current = Math.max(0, visibleMomentsRef.current - 1);
     if (visibleMomentsRef.current !== 0 || !pausedForVideoRef.current) return;
     pausedForVideoRef.current = false;
-    const audio = getInvitationAudio();
-    if (!audio) return;
-    audio.play().catch(() => {});
+    resumeInvitationMusic();
   }, []);
 
   const value = useMemo(
