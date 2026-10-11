@@ -2,6 +2,8 @@ import { INVITATION_MOMENT_VIDEO_URLS } from "../constants/momentVideos";
 import { primeMomentVideo } from "./momentVideoPlayback";
 
 const pool = new Map<string, HTMLVideoElement>();
+/** Full-length clips that should not compete with intro audio on first load. */
+const HEAVY_PRELOAD_METADATA = new Set(["/assets/debutant-elsa.mp4?v=2"]);
 let preloadStarted = false;
 let userHasActivated = false;
 
@@ -51,7 +53,7 @@ export function startInvitationMomentVideoPreload() {
     if (pool.has(url)) continue;
     const el = document.createElement("video");
     el.muted = true;
-    el.preload = "auto";
+    el.preload = HEAVY_PRELOAD_METADATA.has(url) ? "metadata" : "auto";
     el.playsInline = true;
     el.setAttribute("playsinline", "");
     el.src = url;

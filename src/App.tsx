@@ -634,7 +634,7 @@ export default function App() {
 
       <DebutantMoment
         image="/assets/images/debutant-elsa.jpg?v=2"
-        video="/assets/debutant-elsa.mp4"
+        video="/assets/debutant-elsa.mp4?v=2"
         videoSound
         compactVideo
         videoEnhance="subtle"

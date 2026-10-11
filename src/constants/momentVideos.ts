@@ -1,6 +1,6 @@
 /** All inline celebration clips — preload when the guest enters the site. */
 export const INVITATION_MOMENT_VIDEO_URLS = [
-  "/assets/debutant-elsa.mp4",
+  "/assets/debutant-elsa.mp4?v=2",
   "/assets/debutant-karate.mp4",
   "/assets/debutant-singing-recital.mp4",
   "/assets/debutant-pageant.mp4",
