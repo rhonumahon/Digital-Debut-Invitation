@@ -2,9 +2,9 @@
   command = "npm run build"
   publish = "dist"
 
-# Countdown drill (8:56 PM PH, Oct 11 2026). Remove after test.
+# Countdown drill (8:58 PM PH, Oct 11 2026). Remove after test.
 [context.production.environment]
-  VITE_GRAND_ENTRY_AT = "2026-10-11T20:56:00+08:00"
+  VITE_GRAND_ENTRY_AT = "2026-10-11T20:58:00+08:00"
 
 [functions]
   directory = "netlify/functions"
