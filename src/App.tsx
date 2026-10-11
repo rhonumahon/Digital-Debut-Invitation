@@ -6,7 +6,8 @@
 import { useState, useRef, useEffect } from "react";
 import { flushSync } from "react-dom";
 import { Share2, Mail, Heart } from "lucide-react";
-import HeroBanner, { GOWN_CHANGE_AT } from "./components/HeroBanner";
+import HeroBanner from "./components/HeroBanner";
+import { resolveGrandEntryMs, useGrandEntryMs } from "./config/grandEntry";
 import EventCountdown from "./components/EventCountdown"; // Imported the new component
 import VenueCard from "./components/VenueCard";
 import DressCodeCard from "./components/DressCodeCard";
@@ -97,6 +98,7 @@ declare global {
 }
 
 export default function App() {
+  const grandEntryMs = useGrandEntryMs();
   const pageJumpBarRef = useRef<HTMLDivElement>(null);
   const [guestId, setGuestId] = useState<string | null>(() => readGuestSession());
   const [showEnvelope, setShowEnvelope] = useState(() => !readGuestSession());
@@ -109,7 +111,9 @@ export default function App() {
   const preparingGuest = useRef<string | null>(null);
   const [formVersion, setFormVersion] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [finaleMusic, setFinaleMusic] = useState(() => Date.now() >= GOWN_CHANGE_AT - FINALE_LEAD_MS);
+  const [finaleMusic, setFinaleMusic] = useState(
+    () => Date.now() >= resolveGrandEntryMs() - FINALE_LEAD_MS,
+  );
 
   useFitNavRow(pageJumpBarRef, ".page-jump", {
     maxPx: 14,
@@ -125,7 +129,7 @@ export default function App() {
     if (finaleMusic) return;
     let timer = 0;
     const arm = () => {
-      const wait = GOWN_CHANGE_AT - FINALE_LEAD_MS - Date.now();
+      const wait = grandEntryMs - FINALE_LEAD_MS - Date.now();
       if (wait <= 0) {
         setFinaleMusic(true);
         return;
@@ -134,7 +138,7 @@ export default function App() {
     };
     arm();
     return () => window.clearTimeout(timer);
-  }, [finaleMusic]);
+  }, [finaleMusic, grandEntryMs]);
 
   useEffect(() => {
     const audio = audioRef.current;

@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { Calendar, MapPin } from "lucide-react";
+import { useGrandEntryMs } from "../config/grandEntry";
 import Reveal from "./Reveal";
 import SectionFlourish from "./SectionFlourish";
 
@@ -91,11 +92,10 @@ function LiveClock({ now }: { now: Date }) {
 }
 
 export default function EventCountdown() {
-  // Guests arrive at 5:00 PM. The countdown runs to the 5:40 PM grand entry.
-  const eventDate = new Date("2026-11-07T17:40:00").getTime();
+  const grandEntryMs = useGrandEntryMs();
 
   const calculateTimeLeft = (nowMs: number): TimeLeft => {
-    const difference = eventDate - nowMs;
+    const difference = grandEntryMs - nowMs;
 
     let timeLeft: TimeLeft = { days: 0, hours: 0, minutes: 0, seconds: 0 };
 

@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
+import { useGrandEntryMs } from "../config/grandEntry";
 import { useFitSingleLineText } from "../hooks/useFitSingleLineText";
 
 const NUMBER_GLINTS = [
@@ -27,7 +28,6 @@ const NAME_GLINTS = [
 
 const GOWN_COPPER = "/assets/images/debut-gown-white.png?v=15";
 const GOWN_BLUE = "/assets/images/debut-gown-blue.png?v=15";
-export const GOWN_CHANGE_AT = new Date("2026-11-07T17:40:00").getTime();
 const WIPE_SECONDS = 16;
 const GOWN_WIPE_MS = WIPE_SECONDS * 1000;
 const TIMEOUT_MAX = 2_147_483_647;
@@ -53,19 +53,19 @@ function lightPassDelay() {
   return Math.round(Math.min(0.9, Math.max(0.08, t)) * WIPE_SECONDS * 1000) + 350;
 }
 
-function useCelebrationGown() {
+function useCelebrationGown(grandEntryMs: number) {
   const [phase, setPhase] = useState<"copper" | "wiping" | "blue">(() =>
-    Date.now() >= GOWN_CHANGE_AT ? "blue" : "copper"
+    Date.now() >= grandEntryMs ? "blue" : "copper",
   );
 
   useEffect(() => {
     const preload = new Image();
     preload.src = GOWN_BLUE;
-    if (Date.now() >= GOWN_CHANGE_AT) return;
+    if (Date.now() >= grandEntryMs) return;
 
     let timer = 0;
     const arm = () => {
-      const wait = GOWN_CHANGE_AT - Date.now();
+      const wait = grandEntryMs - Date.now();
       if (wait <= 0) {
         setPhase("wiping");
         return;
@@ -74,7 +74,7 @@ function useCelebrationGown() {
     };
     arm();
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [grandEntryMs]);
 
   useEffect(() => {
     if (phase !== "wiping") return;
@@ -115,24 +115,24 @@ const PETAL_FILLS = [
 
 const MARK_EASE_MS = 3200;
 
-function useHeroMark(gownPhase: "copper" | "wiping" | "blue") {
+function useHeroMark(gownPhase: "copper" | "wiping" | "blue", grandEntryMs: number) {
   const [now, setNow] = useState(() => Date.now());
   const [easing, setEasing] = useState(false);
-  const [settled, setSettled] = useState(() => Date.now() >= GOWN_CHANGE_AT);
+  const [settled, setSettled] = useState(() => Date.now() >= grandEntryMs);
 
   useEffect(() => {
     let timer = 0;
     const tick = () => {
       const current = Date.now();
       setNow(current);
-      const left = GOWN_CHANGE_AT - current;
+      const left = grandEntryMs - current;
       if (left <= 0) return;
       const wait = left > COUNTDOWN_WINDOW_MS ? left - COUNTDOWN_WINDOW_MS : 1000 - (current % 1000);
       timer = window.setTimeout(tick, Math.min(wait, TIMEOUT_MAX));
     };
     tick();
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [grandEntryMs]);
 
   useEffect(() => {
     if (gownPhase === "blue") {
@@ -141,10 +141,10 @@ function useHeroMark(gownPhase: "copper" | "wiping" | "blue") {
       return;
     }
     if (gownPhase !== "wiping") return;
-    const wait = Math.max(0, lightPassDelay() - (Date.now() - GOWN_CHANGE_AT));
+    const wait = Math.max(0, lightPassDelay() - (Date.now() - grandEntryMs));
     const timer = window.setTimeout(() => setEasing(true), wait);
     return () => window.clearTimeout(timer);
-  }, [gownPhase]);
+  }, [gownPhase, grandEntryMs]);
 
   useEffect(() => {
     if (!easing) return;
@@ -155,7 +155,7 @@ function useHeroMark(gownPhase: "copper" | "wiping" | "blue") {
     return () => window.clearTimeout(timer);
   }, [easing]);
 
-  const remaining = GOWN_CHANGE_AT - now;
+  const remaining = grandEntryMs - now;
   if (easing) return { kind: "easing" as const, text: "0" };
   if (remaining > COUNTDOWN_WINDOW_MS || settled) return { kind: "eighteen" as const, text: "18" };
   if (remaining > 10_000) return { kind: "clock" as const, text: formatClock(remaining) };
@@ -164,8 +164,9 @@ function useHeroMark(gownPhase: "copper" | "wiping" | "blue") {
 }
 
 export default function HeroBanner({ titlesVisible = false }: { titlesVisible?: boolean }) {
-  const gownPhase = useCelebrationGown();
-  const heroMark = useHeroMark(gownPhase);
+  const grandEntryMs = useGrandEntryMs();
+  const gownPhase = useCelebrationGown(grandEntryMs);
+  const heroMark = useHeroMark(gownPhase, grandEntryMs);
   const heroTitleFrameRef = useRef<HTMLDivElement>(null);
   const heroNameRef = useRef<HTMLParagraphElement>(null);
   const [compactHeroTitle, setCompactHeroTitle] = useState(() =>
