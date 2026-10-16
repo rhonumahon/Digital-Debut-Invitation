@@ -85,11 +85,10 @@ export function lookupByFirstName(data: AttendanceData, query: string): NameMatc
   if (needle.length < 2) return [];
   const grouped = new Map<string, Guest[]>();
   for (const guest of data.guests) {
-    const matches = guest.fullName
-      .trim()
-      .toLowerCase()
-      .split(/\s+/)
-      .some((word) => word.startsWith(needle));
+    const normalized = guest.fullName.trim().toLowerCase();
+    const matches =
+      normalized.includes(needle) ||
+      normalized.split(/\s+/).some((word) => word.startsWith(needle));
     if (!matches) continue;
     const key = nameKey(guest.fullName);
     grouped.set(key, [...(grouped.get(key) ?? []), guest]);

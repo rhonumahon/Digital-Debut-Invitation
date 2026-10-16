@@ -15,9 +15,33 @@ function withLock<T>(task: () => Promise<T>): Promise<T> {
   return run;
 }
 
-async function load(store: AttendanceStore): Promise<AttendanceData> {
+function isAttendanceData(value: unknown): value is AttendanceData {
+  if (!value || typeof value !== "object") return false;
+  const record = value as AttendanceData;
+  return Array.isArray(record.guests) && Array.isArray(record.responses);
+}
+
+/** Read roster for public GET handlers — never seeds or overwrites blob storage. */
+async function readAttendance(store: AttendanceStore): Promise<AttendanceData | null> {
+  const attempts = 3;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      const existing = await store.read();
+      if (isAttendanceData(existing)) return existing;
+    } catch {
+      /* transient blob read — retry */
+    }
+    if (i < attempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 60 * (i + 1)));
+    }
+  }
+  return null;
+}
+
+/** Load roster for writes; seeds only when storage is truly empty (inside mutation lock). */
+async function loadForWrite(store: AttendanceStore): Promise<AttendanceData> {
   const existing = await store.read();
-  if (existing && Array.isArray(existing.guests) && Array.isArray(existing.responses)) return existing;
+  if (isAttendanceData(existing)) return existing;
   const seeded = emptyAttendance();
   await store.write(seeded);
   return seeded;
@@ -40,18 +64,22 @@ export async function handleAttendance(request: Request, store: AttendanceStore,
 
   try {
     if (request.method === "GET" && path === "/api/roster") {
-      const data = await load(store);
+      const data = await readAttendance(store);
+      if (!data) return json({ error: "The invitation list could not be read." }, 503);
       return json(publicRoster(data));
     }
 
     if (request.method === "GET" && path === "/api/lookup") {
-      const data = await load(store);
-      return json({ matches: lookupByFirstName(data, url.searchParams.get("first") ?? "") });
+      const data = await readAttendance(store);
+      if (!data) return json({ matches: [], error: "The invitation list could not be read." }, 503);
+      const query = url.searchParams.get("q") ?? url.searchParams.get("first") ?? "";
+      return json({ matches: lookupByFirstName(data, query) });
     }
 
     if (request.method === "GET" && path === "/api/family") {
       const guestId = url.searchParams.get("guestId") ?? "";
-      const data = await load(store);
+      const data = await readAttendance(store);
+      if (!data) return json({ error: "The invitation list could not be read." }, 503);
       const members = toFamilyView(data, guestId);
       if (members.length === 0) return json({ error: "That name is not on the invitation." }, 404);
       return json({ actor: members[0], members });
@@ -71,7 +99,7 @@ export async function handleAttendance(request: Request, store: AttendanceStore,
         reason: item.reason ?? "",
       }));
       return withLock(async () => {
-        const data = await load(store);
+        const data = await loadForWrite(store);
         const saved = saveDecisions(data, body.guestId!, decisions);
         if (saved.ok === false) return json({ error: saved.error }, 400);
         await store.write(saved.data);
@@ -84,7 +112,8 @@ export async function handleAttendance(request: Request, store: AttendanceStore,
         return json({ error: adminPin ? "That PIN is not correct." : "The admin PIN is not configured." }, adminPin ? 401 : 503);
       }
       if (request.method === "GET") {
-        const data = await load(store);
+        const data = await readAttendance(store);
+        if (!data) return json({ error: "The invitation list could not be read." }, 503);
         return json({
           tables: normalizeTables(data.tables),
           guests: data.guests.map((guest) => ({
@@ -99,7 +128,7 @@ export async function handleAttendance(request: Request, store: AttendanceStore,
         if (!Array.isArray(body.rows)) return json({ error: "Missing names." }, 400);
         const rows = body.rows.filter((row) => row && isRole(row.role));
         return withLock(async () => {
-          const data = await load(store);
+          const data = await loadForWrite(store);
           const saved = replaceRoster(data, rows, body.tables);
           if (saved.ok === false) return json({ error: saved.error }, 400);
           await store.write(saved.data);
